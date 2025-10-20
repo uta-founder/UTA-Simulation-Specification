@@ -1,15 +1,11 @@
 # Unified Trade Authority
 
-# Summary of [Manifesto](https://medium.com/@rossbrodskiy/unified-trade-authority-a-manifesto-for-fair-and-strategic-global-trade-c8bed4b2d494)
-
+# Summary of the original [Manifesto](https://medium.com/@rossbrodskiy/unified-trade-authority-a-manifesto-for-fair-and-strategic-global-trade-c8bed4b2d494)
+## **Simulation :** [Link](UTA/UTA%20Simulation.md)
 **Thesis**
-
 The current global trade system is failing: WTO is gridlocked, ad-hoc alliances are piecemeal, and trade rules don’t adequately address sovereignty, climate, labor, or strategic coercion. Brodskiy proposes the **Unified Trade Authority (UTA)** as a next-generation institution to restore fairness and structure.
-
 ---
-
 **Core Components of UTA**
-
 1. **Governance Structure (Tripartite Council / T3C)**
     - Divides membership into three blocs: Atlantic-Pacific (advanced economies), Strategic South (emerging/developing), and Continental Sovereignty (powers asserting strategic autonomy).
     - Leadership rotates every two years among blocs.
@@ -32,7 +28,6 @@ The current global trade system is failing: WTO is gridlocked, ad-hoc alliances 
     - *Commodity Laundering / Origin Fraud*: Mandated digital chain-of-origin certificates, customs cooperation, AI trade analysis, joint inspections, sanctions on facilitators.
     - *Sanctions Evasion Networks*: Integrated trade + financial intelligence, unified sanctions lists, peer enforcement, and coordinated prosecution.
     - *Environmental Dumping & Labor Abuses*: Mandatory reporting and monitoring, trade penalties on violators, rewards (extra credits) for superior compliance, aid to lagging members for upgrading capacity.
-    
 5. **Strategic Benefits for Members**
     - Access to a large, stable “premium” trading bloc with lower friction.
     - Protection for sensitive sectors via the credit system rather than blunt tariffs.
@@ -47,6 +42,6 @@ The current global trade system is failing: WTO is gridlocked, ad-hoc alliances 
 - Technological, surveillance, and enforcement overhead: UTA assumes investment in modern monitoring (satellite, AI) is necessary to make rules credible.
 # Major Phases to real world adoption
 
-[UTA Simulation](UTA/UTA%20Simulation.md)
+
 
 [Post Simulation Work (papers, PhDs and tournaments)](UTA/Post%20Simulation%20Work%20(papers,%20PhDs%20and%20tournaments).md)
