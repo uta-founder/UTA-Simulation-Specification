@@ -2,443 +2,778 @@
 
 ## Purpose & Scope
 
-The Demand Module models consumption patterns, preferences, and demand elasticities for all products across countries. It captures both domestic demand (internal consumption) and import demand, incorporating substitution effects between domestic production and imports, as well as between different import sources. The module provides the demand-side equations for market equilibrium and drives import requirements that feed into trade flow decisions.
+The Demand Module formalizes how countries and consumers demand goods and services, both domestically produced and imported. It models substitution between domestic and foreign varieties (Armington assumption), price and income elasticities, and compositional demand across sectors. This module is foundational to the CGE system: without properly specified demand, equilibrium prices cannot be determined and trade flows cannot be computed.
 
-This module implements nested demand structures that reflect real-world consumption hierarchies: consumers first decide total consumption levels, then allocate between domestic and imported varieties, and finally choose among import sources based on price and preference.
+Demand in the UTA simulation operates at two levels:
+1. **Final Demand:** Households, government, and investment demand for finished goods
+2. **Intermediate Demand:** Firms demanding inputs for production (handled via input-output linkages)
 
-## Key Components
+This specification focuses primarily on final demand, with integration points for intermediate demand via MRIO tables.
 
-### 1. Demand Function System
-- **Aggregate Demand**: Total consumption demand by country and product
-- **Armington Aggregator**: CES nesting of domestic vs import varieties
-- **Import Source Allocation**: Second-stage CES across import origins
-- **Price Responsiveness**: Own-price and cross-price elasticities
+---
 
-### 2. Utility Maximization Framework
-- Representative consumer optimization
-- Budget constraint enforcement
-- Nested CES utility structure
-- Corner solutions for zero consumption
+## Economic Foundation
 
-### 3. Demand Shifters
-- Income effects (GDP per capita changes)
-- Population dynamics
-- Preference shocks (policy-induced or exogenous)
-- Seasonal and cyclical factors
+### 1. Armington Aggregation
 
-### 4. Substitution Mechanics
-- Domestic-import substitution (first nest)
-- Import-import substitution (second nest)
-- Cross-product substitution (for close substitutes)
-- Quality-adjusted preferences
+Products are differentiated by country of origin. A country j consuming product p sources it from multiple origins i (including domestic production). These varieties are imperfect substitutes aggregated via a CES (Constant Elasticity of Substitution) function:
+
+```
+Q[j,p] = A[j,p] * (Σ[i] α[i,j,p]^(1/σ[p]) * q[i,j,p]^((σ[p]-1)/σ[p]))^(σ[p]/(σ[p]-1))
+
+Where:
+- Q[j,p] = Composite good p consumed in country j (Armington aggregate)
+- q[i,j,p] = Quantity of product p sourced from country i and consumed in country j
+- α[i,j,p] = Share parameter (preference for origin i in country j for product p)
+- σ[p] = Elasticity of substitution between origins for product p
+- A[j,p] = Efficiency parameter (calibrated scale factor)
+```
+
+**Economic Intuition:**
+- σ[p] > 1: Varieties are substitutes (higher σ means easier substitution)
+- Commodities (oil, wheat): σ ≈ 5-8 (highly substitutable)
+- Differentiated products (cars, pharmaceuticals): σ ≈ 2-3 (less substitutable)
+- Strategic goods (semiconductors): σ ≈ 1.2-1.5 (very difficult to substitute)
+
+### 2. Demand for Composite Good
+
+The quantity of composite good Q[j,p] demanded in country j depends on:
+- Price of the composite good P[j,p]
+- Consumer income/expenditure Y[j]
+- Population N[j]
+- Preferences and subsistence requirements
+
+We use a **Linear Expenditure System (LES)** to capture subsistence consumption and income effects:
+
+```
+Q[j,p] = γ[j,p] + (β[j,p] / P[j,p]) * (Y[j] - Σ[k] P[j,k] * γ[j,k])
+
+Where:
+- γ[j,p] = Subsistence quantity (minimum consumption of p in country j)
+- β[j,p] = Marginal budget share (fraction of supernumerary income spent on p)
+- Y[j] = Total expenditure (income) in country j
+- Σ[k] P[j,k] * γ[j,k] = Expenditure on subsistence consumption
+
+Constraint: Σ[p] β[j,p] = 1 (budget shares sum to one)
+```
+
+**Alternative Formulation (Cobb-Douglas for MVP):**
+For simplicity in early implementation, Cobb-Douglas demand is acceptable:
+
+```
+Q[j,p] = (β[j,p] * Y[j]) / P[j,p]
+
+Where β[j,p] is the expenditure share on product p.
+```
+
+### 3. Source-Specific Demand (Import Composition)
+
+Given total demand Q[j,p] for the composite good, demand for each origin i is derived from cost minimization:
+
+```
+q[i,j,p] = α[i,j,p] * (P[i,j,p] / P[j,p])^(-σ[p]) * Q[j,p]
+
+Where:
+- P[i,j,p] = Delivered price from origin i to destination j for product p (CIF + tariff)
+- P[j,p] = Price index of the composite good (Armington price index)
+```
+
+**Armington Price Index:**
+```
+P[j,p] = (Σ[i] α[i,j,p] * P[i,j,p]^(1-σ[p]))^(1/(1-σ[p]))
+```
+
+### 4. Price Elasticities
+
+**Own-Price Elasticity:**
+```
+ε[j,p] = ∂Q[j,p]/∂P[j,p] * P[j,p]/Q[j,p]
+
+For LES: ε[j,p] = -1 + (γ[j,p] * P[j,p]) / Q[j,p]  (more inelastic for necessities)
+For Cobb-Douglas: ε[j,p] = -1  (unitary elastic)
+```
+
+**Substitution Elasticity (between origins):**
+```
+ε[i,j,p] = ∂(q[i,j,p]/q[k,j,p])/∂(P[i,j,p]/P[k,j,p]) * (P[i,j,p]/P[k,j,p])/(q[i,j,p]/q[k,j,p])
+
+For Armington CES: ε[i,j,p] = σ[p]
+```
+
+### 5. Income Elasticity
+
+**Income Elasticity:**
+```
+η[j,p] = ∂Q[j,p]/∂Y[j] * Y[j]/Q[j,p]
+
+For LES: η[j,p] = β[j,p] * Y[j] / (P[j,p] * Q[j,p])  (varies by income level)
+For Cobb-Douglas: η[j,p] = 1  (proportional to income)
+
+Empirical ranges:
+- Necessities (food, energy): 0.3 - 0.7
+- Normal goods (manufactures): 0.8 - 1.2
+- Luxuries (high-tech, services): 1.3 - 2.0
+```
+
+---
 
 ## Data Structures
 
 ### Input Data
+
 ```python
 class DemandInputs:
-    # Economic Fundamentals
-    gdp_per_capita: dict[country] -> float                    # Income level
-    population: dict[country] -> float                        # Market size
-    price_indices: dict[country] -> float                     # General price level
+    # Country Characteristics
+    gdp: dict[country] -> float  # Total GDP (or total expenditure)
+    population: dict[country] -> float  # Population size
+    per_capita_income: dict[country] -> float  # GDP / Population
 
-    # Product Prices
-    domestic_prices: dict[country][product] -> float          # Local production price
-    import_prices: dict[country][product][source] -> float    # CIF prices by source
+    # Prices (from Pricing Module)
+    composite_prices: dict[country][product] -> float  # P[j,p]
+    bilateral_prices: dict[origin][dest][product] -> float  # P[i,j,p] (CIF + tariff)
 
-    # From Trade Flow Module
-    available_suppliers: dict[country][product] -> list[supplier]
-    supply_reliability: dict[supplier][product] -> float      # 0-1 score
+    # Preference Parameters (calibrated)
+    expenditure_shares: dict[country][product] -> float  # β[j,p]
+    subsistence_quantities: dict[country][product] -> float  # γ[j,p]
+    armington_shares: dict[origin][dest][product] -> float  # α[i,j,p]
+    substitution_elasticities: dict[product] -> float  # σ[p]
 
-    # Policy Variables
-    consumption_taxes: dict[country][product] -> float        # VAT, excise
-    consumption_subsidies: dict[country][product] -> float    # Food, energy subsidies
+    # Policy Shocks (from Policy Modules)
+    demand_shocks: dict[country][product] -> float  # Exogenous demand changes
 ```
 
-### Internal Parameters
+### Internal State
+
 ```python
-class DemandParameters:
-    # Elasticity Parameters (calibrated)
-    income_elasticity: dict[product] -> float                 # ε_income
-    price_elasticity_own: dict[product] -> float             # ε_own
-    armington_elasticity: dict[product] -> float             # σ_domestic/import
-    import_substitution_elasticity: dict[product] -> float    # σ_between_sources
+class DemandState:
+    # Composite Demand
+    total_demand: dict[country][product] -> float  # Q[j,p]
 
-    # Preference Parameters
-    consumption_shares: dict[country][product] -> float       # α in utility
-    domestic_preference_bias: dict[country][product] -> float # Home bias parameter
-    import_source_preferences: dict[country][product][source] -> float
+    # Bilateral Demand (Import Composition)
+    bilateral_demand: np.array[n_countries, n_countries, n_products]  # q[i,j,p]
+    domestic_demand: dict[country][product] -> float  # q[j,j,p]
+    import_demand: dict[dest][product] -> dict[origin -> float]  # Σ[i≠j] q[i,j,p]
 
-    # Subsistence Consumption
-    minimum_consumption: dict[country][product] -> float      # Stone-Geary LES
+    # Price Indices
+    armington_price_index: dict[country][product] -> float  # P[j,p]
 
-    # Dynamic Adjustment
-    adjustment_speed: dict[product] -> float                  # Partial adjustment
+    # Elasticity Tracking (for diagnostics)
+    realized_price_elasticity: dict[country][product] -> float
+    realized_income_elasticity: dict[country][product] -> float
 ```
 
 ### Output Data
+
 ```python
 class DemandOutputs:
-    # Consumption Quantities
-    total_demand: dict[country][product] -> float
-    domestic_demand: dict[country][product] -> float
-    import_demand: dict[country][product] -> float
-    import_by_source: dict[country][product][source] -> float
+    # For Equilibrium Solver
+    total_quantity_demanded: dict[country][product] -> float  # Q[j,p]
+    excess_demand: dict[country][product] -> float  # Q[j,p] - Supply[j,p]
 
-    # Derived Metrics
-    import_penetration: dict[country][product] -> float       # Import share
-    demand_elasticity_realized: dict[country][product] -> float
-    consumer_surplus: dict[country] -> float
+    # For Trade Flow Module
+    import_demand_by_source: dict[dest][product][origin] -> float  # q[i,j,p]
+    import_value_by_source: dict[dest][product][origin] -> float  # P[i,j,p] * q[i,j,p]
 
-    # Market Signals
-    excess_demand: dict[country][product] -> float           # Shortage signal
-    substitution_pressure: dict[country][product] -> float    # Switch incentive
+    # For Country Agents
+    consumer_surplus: dict[country][product] -> float
+    expenditure_by_product: dict[country][product] -> float
+    import_penetration_rate: dict[country][product] -> float  # Import / Total Demand
 
-    # For Welfare Analysis
-    utility_level: dict[country] -> float
-    equivalent_variation: dict[country] -> float              # Welfare change
+    # For Pricing Module
+    marginal_willingness_to_pay: dict[country][product] -> float
+    demand_sensitivity: dict[country][product] -> float  # ∂Q/∂P
 ```
 
-## Economic Logic
+---
 
-### 1. Nested CES Demand Structure
-
-**First Stage - Total Consumption**:
-```
-Q[c,p] = α[c,p] * (Y[c]/POP[c])^ε_y[p] * P_composite[c,p]^ε_p[p]
-
-Where:
-- Q[c,p] = Total quantity demanded of product p in country c
-- α[c,p] = Preference parameter
-- Y[c]/POP[c] = Per capita income
-- ε_y[p] = Income elasticity
-- P_composite[c,p] = Composite price index
-- ε_p[p] = Price elasticity
-```
-
-**Second Stage - Armington Aggregation**:
-```
-Q[c,p] = (δ_d[c,p] * Q_d[c,p]^((σ-1)/σ) + δ_m[c,p] * Q_m[c,p]^((σ-1)/σ))^(σ/(σ-1))
-
-Where:
-- Q_d[c,p] = Domestic variety consumption
-- Q_m[c,p] = Import variety consumption
-- δ_d, δ_m = Share parameters (sum to 1)
-- σ = Armington elasticity of substitution
-```
-
-**Third Stage - Import Source Allocation**:
-```
-Q_m[c,p] = (Σ[s] β[c,p,s] * Q[c,p,s]^((ρ-1)/ρ))^(ρ/(ρ-1))
-
-Where:
-- Q[c,p,s] = Imports from source country s
-- β[c,p,s] = Source preference parameter
-- ρ = Elasticity of substitution between import sources
-```
-
-### 2. Optimal Allocation Conditions
-
-**Domestic vs Import Share**:
-```python
-def calculate_domestic_import_shares(prices, params):
-    # Relative price
-    price_ratio = prices['import'] / prices['domestic']
-
-    # Apply home bias
-    adjusted_ratio = price_ratio * (1 + params['home_bias'])
-
-    # CES allocation
-    import_share = 1 / (1 + (adjusted_ratio)**params['armington_elasticity'])
-    domestic_share = 1 - import_share
-
-    return domestic_share, import_share
-```
-
-**Import Source Selection**:
-```python
-def allocate_import_sources(import_demand, source_prices, params):
-    # Calculate price index
-    price_index = sum([
-        params['source_preference'][s] * price**(1-params['rho'])
-        for s, price in source_prices.items()
-    ])**(1/(1-params['rho']))
-
-    # Allocate by relative prices
-    shares = {}
-    for source, price in source_prices.items():
-        relative_price = price / price_index
-        shares[source] = params['source_preference'][source] * \
-                        (relative_price)**(-params['rho'])
-
-    # Normalize and apply to total import demand
-    total_share = sum(shares.values())
-    quantities = {s: import_demand * share/total_share
-                 for s, share in shares.items()}
-
-    return quantities
-```
-
-### 3. Income and Substitution Effects
-
-**Slutsky Decomposition**:
-```python
-def calculate_demand_response(price_change, income_change, params):
-    # Marshallian demand change
-    total_effect = params['own_price_elasticity'] * price_change + \
-                   params['income_elasticity'] * income_change
-
-    # Decompose into substitution and income effects
-    substitution_effect = params['compensated_elasticity'] * price_change
-    income_effect = total_effect - substitution_effect
-
-    return {
-        'total': total_effect,
-        'substitution': substitution_effect,
-        'income': income_effect
-    }
-```
-
-### 4. Dynamic Adjustment Process
-
-**Partial Adjustment Model**:
-```
-Q[t] = Q[t-1] + λ * (Q_desired[t] - Q[t-1]) + ε[t]
-
-Where:
-- λ = Adjustment speed parameter (0 < λ ≤ 1)
-- Q_desired = Long-run equilibrium demand
-- ε = Stochastic shock
-```
-
-### 5. Welfare Calculations
-
-**Consumer Surplus**:
-```python
-def calculate_consumer_surplus(demand_curve, price_before, price_after, quantity):
-    # For linear demand
-    if demand_curve['type'] == 'linear':
-        cs_change = 0.5 * (price_before - price_after) * \
-                    (quantity_before + quantity_after)
-
-    # For CES demand
-    elif demand_curve['type'] == 'ces':
-        # Use expenditure function
-        cs_change = expenditure(price_after, utility_before) - \
-                   expenditure(price_before, utility_before)
-
-    return cs_change
-```
-
-## Integration Points
-
-### Inputs From Other Modules
-
-1. **From Trade Flow Module**:
-   - Available import sources and reliability
-   - Delivered prices (CIF + tariff)
-   - Supply constraints and quotas
-
-2. **From Pricing & Equilibrium Module**:
-   - Equilibrium prices for all products
-   - Price indices and inflation rates
-   - Market clearing signals
-
-3. **From Country Agents**:
-   - GDP and population data
-   - Domestic production volumes
-   - Policy stance (protectionist vs open)
-
-4. **From Subsidy & Industrial Policy Module**:
-   - Consumption subsidies (food, fuel)
-   - VAT and excise tax rates
-   - Public procurement demand
-
-5. **From Sanctions & Geopolitics Module**:
-   - Import bans and restrictions
-   - Preference shifts from political tensions
-   - Strategic stockpiling requirements
-
-### Outputs To Other Modules
-
-1. **To Trade Flow Module**:
-   - Import demand by product and preferred sources
-   - Demand elasticities for trade modeling
-   - Maximum willingness to pay
-
-2. **To Pricing & Equilibrium Module**:
-   - Total demand quantities for market clearing
-   - Demand curves and elasticities
-   - Excess demand signals
-
-3. **To Country Agents**:
-   - Consumer welfare metrics
-   - Import dependence ratios
-   - Demand satisfaction levels
-
-4. **To Compliance & Detection Module**:
-   - Unusual demand spikes (hoarding signals)
-   - Substitution patterns (circumvention indicator)
-
-## Implementation Guidance
+## Implementation Specification
 
 ### Algorithm Flow
 
 ```python
 def update_demand(world_state):
-    """Main demand calculation cycle"""
+    """
+    Main demand update cycle
 
-    for country in world_state.countries:
-        # Step 1: Calculate income-driven demand
-        base_demand = calculate_base_demand(
-            country.gdp_per_capita,
-            country.population,
-            country.preferences
-        )
+    Called each simulation step after prices are updated
+    """
 
-        # Step 2: Apply price effects
-        for product in world_state.products:
-            # Get all prices
-            prices = get_price_structure(country, product)
+    # Step 1: Calculate Armington price indices
+    armington_prices = calculate_armington_price_indices(
+        world_state.bilateral_prices,
+        world_state.armington_shares,
+        world_state.substitution_elasticities
+    )
 
-            # First nest: domestic vs import
-            domestic_share, import_share = armington_allocation(
-                prices['domestic'],
-                prices['import_composite'],
-                params['armington_elasticity'][product]
-            )
+    # Step 2: Calculate total composite demand (LES or Cobb-Douglas)
+    total_demand = calculate_composite_demand(
+        armington_prices,
+        world_state.gdp,
+        world_state.expenditure_shares,
+        world_state.subsistence_quantities,
+        demand_system='LES'  # or 'cobb_douglas' for MVP
+    )
 
-            # Second nest: allocate among import sources
-            if import_share > 0:
-                import_allocation = allocate_imports(
-                    import_share * base_demand[product],
-                    prices['import_by_source'],
-                    params['source_substitution'][product]
-                )
+    # Step 3: Decompose into bilateral demands (import composition)
+    bilateral_demand = decompose_to_bilateral_demand(
+        total_demand,
+        world_state.bilateral_prices,
+        armington_prices,
+        world_state.armington_shares,
+        world_state.substitution_elasticities
+    )
 
-            # Step 3: Check constraints
-            final_demand = apply_constraints(
-                base_demand[product],
-                country.budget_constraint,
-                world_state.supply_limits
-            )
+    # Step 4: Calculate demand-side metrics
+    import_penetration = calculate_import_penetration(bilateral_demand)
+    consumer_surplus = calculate_consumer_surplus(total_demand, armington_prices)
 
-            # Step 4: Calculate welfare
-            welfare_change = calculate_welfare_impact(
-                prices, quantities, country.utility_function
-            )
+    # Step 5: Update state and return outputs
+    world_state.demand_state.update(
+        total_demand=total_demand,
+        bilateral_demand=bilateral_demand,
+        armington_price_index=armington_prices
+    )
 
-        # Step 5: Update state
-        country.demand_state.update(final_demand, welfare_change)
-
-    return aggregate_demand_signals(world_state)
+    return DemandOutputs(
+        total_quantity_demanded=total_demand,
+        import_demand_by_source=bilateral_demand,
+        import_penetration_rate=import_penetration,
+        consumer_surplus=consumer_surplus
+    )
 ```
 
-### Computational Considerations
+### Detailed Function Specifications
 
-1. **CES Function Evaluation**:
-   - Pre-compute elasticity transformations
-   - Use log-linear approximations for small changes
-   - Cache price indices for repeated calculations
+#### 1. Armington Price Index Calculation
 
-2. **Nested Structure**:
-   - Solve recursively from bottom up
-   - Maintain consistency between nesting levels
-   - Handle corner solutions explicitly
+```python
+def calculate_armington_price_indices(bilateral_prices, armington_shares, sigma):
+    """
+    Calculate price index for composite goods under Armington aggregation
 
-3. **Convergence Issues**:
-   - Implement dampening for oscillations
-   - Set maximum iterations
-   - Use adaptive step sizes
+    P[j,p] = (Σ[i] α[i,j,p] * P[i,j,p]^(1-σ[p]))^(1/(1-σ[p]))
 
-4. **Memory Optimization**:
-   - Store only active trade relationships
-   - Aggregate minor suppliers
-   - Use sparse matrices for preferences
+    Parameters:
+    - bilateral_prices: dict[origin][dest][product] -> float
+    - armington_shares: dict[origin][dest][product] -> float (α[i,j,p])
+    - sigma: dict[product] -> float (σ[p])
+
+    Returns:
+    - armington_prices: dict[dest][product] -> float
+    """
+    armington_prices = {}
+
+    for dest in countries:
+        armington_prices[dest] = {}
+        for product in products:
+            sigma_p = sigma[product]
+            sum_term = 0
+
+            for origin in countries:
+                alpha_ijp = armington_shares[origin][dest][product]
+                price_ijp = bilateral_prices[origin][dest][product]
+                sum_term += alpha_ijp * (price_ijp ** (1 - sigma_p))
+
+            armington_prices[dest][product] = sum_term ** (1 / (1 - sigma_p))
+
+    return armington_prices
+```
+
+#### 2. Composite Demand Calculation (LES)
+
+```python
+def calculate_composite_demand_LES(armington_prices, gdp, beta, gamma):
+    """
+    Calculate total demand for composite goods using Linear Expenditure System
+
+    Q[j,p] = γ[j,p] + (β[j,p] / P[j,p]) * (Y[j] - Σ[k] P[j,k] * γ[j,k])
+
+    Parameters:
+    - armington_prices: dict[country][product] -> float (P[j,p])
+    - gdp: dict[country] -> float (Y[j])
+    - beta: dict[country][product] -> float (marginal budget shares)
+    - gamma: dict[country][product] -> float (subsistence quantities)
+
+    Returns:
+    - total_demand: dict[country][product] -> float (Q[j,p])
+    """
+    total_demand = {}
+
+    for country in countries:
+        # Calculate subsistence expenditure
+        subsistence_expenditure = sum(
+            armington_prices[country][p] * gamma[country][p]
+            for p in products
+        )
+
+        # Supernumerary income
+        supernumerary_income = gdp[country] - subsistence_expenditure
+
+        # Ensure non-negative supernumerary income
+        supernumerary_income = max(supernumerary_income, 0)
+
+        total_demand[country] = {}
+        for product in products:
+            subsistence = gamma[country][product]
+            discretionary = (beta[country][product] / armington_prices[country][product]) * supernumerary_income
+            total_demand[country][product] = subsistence + discretionary
+
+    return total_demand
+```
+
+#### 3. Composite Demand Calculation (Cobb-Douglas - MVP)
+
+```python
+def calculate_composite_demand_cobb_douglas(armington_prices, gdp, beta):
+    """
+    Simplified Cobb-Douglas demand for MVP implementation
+
+    Q[j,p] = (β[j,p] * Y[j]) / P[j,p]
+
+    Parameters:
+    - armington_prices: dict[country][product] -> float
+    - gdp: dict[country] -> float
+    - beta: dict[country][product] -> float (expenditure shares)
+
+    Returns:
+    - total_demand: dict[country][product] -> float
+    """
+    total_demand = {}
+
+    for country in countries:
+        total_demand[country] = {}
+        for product in products:
+            total_demand[country][product] = (
+                beta[country][product] * gdp[country] / armington_prices[country][product]
+            )
+
+    return total_demand
+```
+
+#### 4. Bilateral Demand Decomposition
+
+```python
+def decompose_to_bilateral_demand(total_demand, bilateral_prices, armington_prices,
+                                   armington_shares, sigma):
+    """
+    Decompose composite demand into demands for each origin
+
+    q[i,j,p] = α[i,j,p] * (P[i,j,p] / P[j,p])^(-σ[p]) * Q[j,p]
+
+    Parameters:
+    - total_demand: dict[dest][product] -> float (Q[j,p])
+    - bilateral_prices: dict[origin][dest][product] -> float (P[i,j,p])
+    - armington_prices: dict[dest][product] -> float (P[j,p])
+    - armington_shares: dict[origin][dest][product] -> float (α[i,j,p])
+    - sigma: dict[product] -> float (σ[p])
+
+    Returns:
+    - bilateral_demand: dict[origin][dest][product] -> float (q[i,j,p])
+    """
+    bilateral_demand = {}
+
+    for origin in countries:
+        bilateral_demand[origin] = {}
+        for dest in countries:
+            bilateral_demand[origin][dest] = {}
+            for product in products:
+                alpha_ijp = armington_shares[origin][dest][product]
+                price_ratio = bilateral_prices[origin][dest][product] / armington_prices[dest][product]
+                sigma_p = sigma[product]
+                Q_jp = total_demand[dest][product]
+
+                bilateral_demand[origin][dest][product] = (
+                    alpha_ijp * (price_ratio ** (-sigma_p)) * Q_jp
+                )
+
+    return bilateral_demand
+```
+
+---
+
+## Integration Points
+
+### Inputs From Other Modules
+
+1. **From Pricing & Market Equilibrium Module:**
+   - Composite good prices P[j,p] (Armington price indices)
+   - Bilateral delivered prices P[i,j,p] (CIF + tariff)
+   - Price update signals
+
+2. **From Country Agents:**
+   - GDP / Total expenditure Y[j]
+   - Population N[j]
+   - Policy-induced demand shocks (e.g., government procurement)
+
+3. **From Trade Flow Module:**
+   - Delivered prices including transport costs and tariffs
+   - Route availability (affects which origins are accessible)
+
+4. **From Sanctions & Geopolitics Module:**
+   - Trade bans (set bilateral demand to zero for sanctioned flows)
+   - Preferential access (modify armington shares for allies)
+
+### Outputs To Other Modules
+
+1. **To Pricing & Market Equilibrium Module:**
+   - Total quantity demanded Q[j,p] for market clearing
+   - Excess demand signals (Q[j,p] - S[j,p])
+   - Demand elasticities for price adjustment algorithms
+
+2. **To Trade Flow Module:**
+   - Import demand by source q[i,j,p]
+   - Import value by source P[i,j,p] * q[i,j,p]
+   - Source substitution patterns (which origins are preferred)
+
+3. **To Country Agents:**
+   - Consumer surplus by product
+   - Import penetration rates (domestic vs foreign consumption)
+   - Expenditure breakdown
+
+4. **To Subsidy & Industrial Policy Module:**
+   - Demand sensitivity to price changes (informs subsidy effectiveness)
+   - Import competition metrics
+
+---
 
 ## Calibration Requirements
 
 ### Required Data Sources
 
-1. **Consumption Data**:
-   - UN National Accounts (final consumption)
-   - OECD Input-Output tables (intermediate demand)
-   - Household expenditure surveys
+1. **Expenditure Shares (β[j,p]):**
+   - Source: Household consumption surveys, national accounts
+   - Database: OECD National Accounts, World Bank Household Surveys
+   - Method: Calculate as (Expenditure on p) / (Total Expenditure)
 
-2. **Trade Data for Calibration**:
-   - Import penetration ratios from WTO
-   - Bilateral trade flows from UN Comtrade
-   - Product-level import data
+2. **Substitution Elasticities (σ[p]):**
+   - Source: Empirical trade literature
+   - Typical values:
+     - GTAP database: σ ranges from 1.9 (agriculture) to 5.6 (services)
+     - Broda & Weinstein (2006): median σ = 4.0 across products
+     - Strategic goods: Set lower (1.2-1.5) to reflect dependency
+   - Method: Use literature estimates or calibrate to match trade flow responses to tariff changes
 
-3. **Elasticity Estimates**:
-   - Academic literature meta-analyses
-   - GTAP elasticity database
-   - Econometric estimates from time series
+3. **Armington Share Parameters (α[i,j,p]):**
+   - Source: Observed trade shares
+   - Method: Calibrate using initial trade flows:
+     ```
+     α[i,j,p] = (q[i,j,p]^((σ[p]-1)/σ[p])) / (Σ[k] q[k,j,p]^((σ[p]-1)/σ[p]))
+     ```
+   - Database: WIOD, OECD ICIO, UN Comtrade
 
-4. **Preference Parameters**:
-   - Revealed preference from trade data
-   - Home bias estimates from gravity models
-   - Quality ladders from unit value data
+4. **Subsistence Quantities (γ[j,p]) - LES only:**
+   - Source: Nutritional requirements (food), minimum energy needs, essential services
+   - Method: Set γ[j,p] as percentage of observed consumption in low-income countries
+   - Typical values: 40-60% of baseline consumption for necessities, 0% for luxuries
 
-### Key Parameters to Calibrate
+5. **GDP and Population:**
+   - Source: World Bank, IMF, OECD
+   - Database: World Development Indicators, OECD.Stat
+
+### Calibration Procedure
+
+**Step 1: Collect Baseline Data**
+- Obtain initial trade flows T0[i,j,p] from WIOD or OECD ICIO
+- Collect GDP, population, and expenditure data
+- Gather price data or assume baseline prices = 1 (numeraire)
+
+**Step 2: Calculate Expenditure Shares**
+```python
+beta[j,p] = sum(T0[i,j,p] * P0[i,j,p] for i in countries) / GDP[j]
+```
+Normalize: Σ[p] beta[j,p] = 1
+
+**Step 3: Set Substitution Elasticities**
+- Use literature values from GTAP or Broda & Weinstein
+- Adjust for strategic products (lower σ for semiconductors, rare earths)
+
+**Step 4: Calibrate Armington Shares**
+```python
+# Calculate total composite consumption
+Q0[j,p] = sum(T0[i,j,p] for i in countries)
+
+# Calculate Armington price index
+P0[j,p] = (sum(alpha_placeholder * P0[i,j,p]^(1-sigma[p]) for i in countries))^(1/(1-sigma[p]))
+
+# Initial guess: equal shares
+alpha_initial[i,j,p] = 1 / n_countries
+
+# Iteratively adjust alpha to match observed trade shares
+for iteration in range(max_iter):
+    predicted_q[i,j,p] = alpha[i,j,p] * (P0[i,j,p] / P0[j,p])^(-sigma[p]) * Q0[j,p]
+    alpha[i,j,p] *= (T0[i,j,p] / predicted_q[i,j,p])^adjustment_rate
+    normalize(alpha, axis=origins)
+```
+
+**Step 5: Validate**
+- Check that predicted demand matches observed consumption
+- Verify that expenditure shares sum to one
+- Test sensitivity to price changes
+
+### Key Parameters and Typical Ranges
 
 ```python
-DEMAND_CALIBRATION = {
-    # Income elasticities by product category
+CALIBRATION_PARAMS = {
+    # Substitution elasticities by product category
+    'sigma': {
+        'agriculture': 3.0,       # Moderately substitutable
+        'mining': 5.0,            # Highly substitutable (commodities)
+        'energy': 4.0,            # Substitutable with some constraints
+        'manufacturing': 3.5,     # Differentiated products
+        'high_tech': 2.0,         # Low substitutability
+        'strategic': 1.3,         # Very low (semiconductors, rare earths)
+        'services': 2.5           # Moderate differentiation
+    },
+
+    # Income elasticities (for reference, not directly used in Cobb-Douglas)
     'income_elasticity': {
-        'food_staples': 0.3,           # Necessity
-        'food_luxury': 1.2,            # Luxury food
-        'energy': 0.8,                 # Normal good
-        'manufacturing': 1.0,          # Unitary
-        'services': 1.3,               # Superior good
-        'raw_materials': 0.7           # Input demand
+        'food': 0.5,
+        'energy': 0.7,
+        'manufactures': 1.0,
+        'high_tech': 1.5,
+        'luxury_services': 1.8
     },
 
-    # Price elasticities (own-price, Marshallian)
-    'price_elasticity': {
-        'food_staples': -0.3,          # Inelastic
-        'energy': -0.4,                # Inelastic
-        'manufacturing': -1.2,         # Elastic
-        'luxury_goods': -1.5,          # Very elastic
-        'commodities': -0.8            # Moderately elastic
-    },
-
-    # Armington elasticities (domestic vs import)
-    'armington_elasticity': {
-        'homogeneous': 5.0,            # Perfect substitutes
-        'differentiated': 2.0,         # Imperfect substitutes
-        'unique': 0.5                  # Poor substitutes
-    },
-
-    # Import source substitution
-    'import_substitution': {
-        'commodities': 10.0,           # Very high
-        'intermediate': 4.0,           # High
-        'consumer_goods': 2.5,         # Moderate
-        'specialized': 1.5             # Low
-    },
-
-    # Home bias parameters
-    'home_bias': {
-        'default': 0.2,                # 20% preference for domestic
-        'food': 0.4,                   # 40% for food security
-        'strategic': 0.6               # 60% for critical goods
-    },
-
-    # Dynamic adjustment speeds
-    'adjustment_speed': {
-        'immediate': 1.0,              # Full adjustment
-        'fast': 0.7,                   # Within period
-        'normal': 0.4,                 # Gradual
-        'slow': 0.2                    # Sticky
+    # Subsistence shares (for LES) - fraction of consumption that is subsistence
+    'subsistence_share': {
+        'food': 0.5,              # 50% of food consumption is subsistence
+        'energy': 0.3,            # 30% for energy
+        'basic_manufactures': 0.2,
+        'high_tech': 0.0,         # No subsistence for luxuries
+        'services': 0.1
     }
 }
 ```
 
-### Validation Metrics
+---
 
-1. **Demand Prediction Accuracy**: MAPE < 10% on out-of-sample
-2. **Elasticity Consistency**: Match econometric estimates ±20%
-3. **Budget Constraint**: Total expenditure = Income (Walras' Law)
-4. **Import Share Stability**: Historical fit R² > 0.8
-5. **Welfare Measures**: Consistent with revealed preference axioms
+## Validation Metrics
+
+1. **Expenditure Conservation:**
+   - Check: Σ[p] P[j,p] * Q[j,p] ≈ GDP[j] (within 1% tolerance)
+
+2. **Trade Share Replication:**
+   - Check: Baseline bilateral demands match observed trade flows
+   - Metric: R² > 0.90 for q[i,j,p] vs observed T[i,j,p]
+
+3. **Elasticity Plausibility:**
+   - Check: Own-price elasticity ε[j,p] < 0 (downward sloping demand)
+   - Check: Substitution elasticity σ[p] > 1 (substitutes, not complements)
+
+4. **Price Response Test:**
+   - Scenario: Increase P[i,j,p] by 10%
+   - Expected: q[i,j,p] decreases, q[k,j,p] increases for k≠i
+   - Check: Elasticity of substitution equals σ[p]
+
+5. **Income Response Test:**
+   - Scenario: Increase GDP[j] by 10%
+   - Expected: All Q[j,p] increase proportionally (Cobb-Douglas) or according to income elasticity (LES)
+   - Check: Σ[p] P[j,p] * ΔQ[j,p] ≈ ΔY[j]
+
+---
+
+## Strategic Gameplay
+
+### Player-Facing Elements
+
+1. **Demand Forecasts:**
+   - Players see projected demand for their exports in each market
+   - Sensitivity analysis: How demand changes with price adjustments
+
+2. **Market Share Opportunities:**
+   - Identify markets where substitution elasticity is high (easier to capture share)
+   - Highlight markets where the player's country has low Armington share (growth potential)
+
+3. **Import Vulnerability:**
+   - Display import penetration rates (% of domestic demand satisfied by imports)
+   - Flag products with high import dependency and low supplier diversity
+
+4. **Demand Shocks:**
+   - Simulate exogenous demand changes (e.g., pandemic shifts, technological obsolescence)
+   - Players can respond with production adjustments or trade diversification
+
+### Strategic Trade-Offs
+
+1. **Price vs Volume:**
+   - Lower export prices → higher demand (elastic goods)
+   - But: Lower revenue per unit
+   - Optimal: Maximize (P[i,j,p] - MC[i,p]) * q[i,j,p]
+
+2. **Market Diversification:**
+   - High Armington share in one market → vulnerable to policy changes
+   - Diversify across markets with different demand characteristics
+
+3. **Product Mix:**
+   - Necessities (low σ) → stable demand, less price-sensitive
+   - Luxuries (high σ) → volatile demand, high price competition
+
+---
+
+## Example Scenarios
+
+### Example 1: Tariff Impact on Import Demand
+
+**Setup:**
+- Country J imports Steel from Country I
+- Initial bilateral price: P[I,J,steel] = 500 USD/ton
+- Initial quantity: q[I,J,steel] = 1000 tons
+- Armington share: α[I,J,steel] = 0.6
+- Substitution elasticity: σ[steel] = 4.0
+- Composite price: P[J,steel] = 480 USD/ton
+- Total demand: Q[J,steel] = 2000 tons
+
+**Scenario:** Country J imposes 25% tariff on imports from Country I
+
+**Step 1: New Bilateral Price**
+```
+P[I,J,steel]_new = 500 * 1.25 = 625 USD/ton
+```
+
+**Step 2: New Composite Price (Armington Index)**
+Assume Country K (alternative supplier) has:
+- P[K,J,steel] = 510 USD/ton (unchanged)
+- α[K,J,steel] = 0.4
+
+```
+P[J,steel]_new = (0.6 * 625^(1-4) + 0.4 * 510^(1-4))^(1/(1-4))
+               = (0.6 * 625^(-3) + 0.4 * 510^(-3))^(-1/3)
+               = (0.6 * 3.90E-9 + 0.4 * 7.53E-9)^(-1/3)
+               = (5.35E-9)^(-1/3)
+               = 584 USD/ton
+```
+
+**Step 3: New Total Demand (Cobb-Douglas)**
+Assume β[J,steel] = 0.1, GDP[J] = 10,000,000 USD
+```
+Q[J,steel]_new = (0.1 * 10,000,000) / 584
+                = 1712 tons (down from 2000 due to higher price)
+```
+
+**Step 4: New Import from Country I**
+```
+q[I,J,steel]_new = 0.6 * (625 / 584)^(-4) * 1712
+                  = 0.6 * (1.07)^(-4) * 1712
+                  = 0.6 * 0.746 * 1712
+                  = 767 tons (down from 1000)
+```
+
+**Step 5: New Import from Country K**
+```
+q[K,J,steel]_new = 0.4 * (510 / 584)^(-4) * 1712
+                  = 0.4 * (0.873)^(-4) * 1712
+                  = 0.4 * 1.715 * 1712
+                  = 1173 tons (up from 800)
+```
+
+**Result:**
+- Country I loses 233 tons of exports (23% decline)
+- Country K gains 373 tons (47% increase)
+- Total imports decrease to 1940 tons
+- Country J experiences slight domestic substitution (60 tons)
+
+---
+
+### Example 2: Income Shock and Demand Adjustment
+
+**Setup:**
+- Country C experiences 10% GDP growth
+- Initial GDP: Y[C] = 1,000,000 USD
+- Products: Food, Manufactures, Luxuries
+- Expenditure shares: β[C,food] = 0.3, β[C,mfg] = 0.5, β[C,lux] = 0.2
+- Prices: P[C,food] = 10, P[C,mfg] = 50, P[C,lux] = 200
+
+**Initial Demand (Cobb-Douglas):**
+```
+Q[C,food] = (0.3 * 1,000,000) / 10 = 30,000 units
+Q[C,mfg] = (0.5 * 1,000,000) / 50 = 10,000 units
+Q[C,lux] = (0.2 * 1,000,000) / 200 = 1,000 units
+```
+
+**After 10% GDP Increase:**
+```
+Y[C]_new = 1,100,000 USD
+
+Q[C,food]_new = (0.3 * 1,100,000) / 10 = 33,000 units (+10%)
+Q[C,mfg]_new = (0.5 * 1,100,000) / 50 = 11,000 units (+10%)
+Q[C,lux]_new = (0.2 * 1,100,000) / 200 = 1,100 units (+10%)
+```
+
+**Interpretation:**
+- With Cobb-Douglas, all demands increase proportionally (unitary income elasticity)
+- With LES, necessities (food) would increase less than 10%, luxuries more than 10%
+
+---
+
+## Computational Considerations
+
+1. **Armington Price Index Calculation:**
+   - CES aggregation can be numerically unstable for extreme σ values
+   - Use logarithmic formulation for σ ≠ 1:
+     ```
+     log(P[j,p]) = (1/(1-σ[p])) * log(Σ[i] α[i,j,p] * exp((1-σ[p]) * log(P[i,j,p])))
+     ```
+
+2. **Budget Share Normalization:**
+   - Ensure Σ[p] β[j,p] = 1 after calibration
+   - Renormalize if parameters are adjusted:
+     ```
+     β[j,p] = β[j,p] / Σ[k] β[j,k]
+     ```
+
+3. **Handling Zero Flows:**
+   - If q[i,j,p] = 0 in baseline, set α[i,j,p] = small_epsilon (e.g., 1e-6)
+   - Prevents division by zero in calibration
+   - Allows potential trade to emerge under policy changes
+
+4. **Convergence in Iterative Calibration:**
+   - Use damped updates: α_new = λ * α_calculated + (1-λ) * α_old
+   - Typical damping: λ = 0.3
+   - Convergence criterion: max|α_new - α_old| < 1e-5
+
+---
+
+## Extensions and Future Enhancements
+
+1. **Non-Homothetic Preferences:**
+   - Implement full LES to capture income-dependent expenditure patterns
+   - Important for modeling development and inequality
+
+2. **Intermediate Demand:**
+   - Integrate with MRIO tables for input-output linkages
+   - Firms demand inputs based on production technology
+
+3. **Demand for Varieties:**
+   - Model demand for firm-level varieties (Dixit-Stiglitz)
+   - Allows for entry/exit of firms and product differentiation
+
+4. **Dynamic Demand:**
+   - Habit formation and durability
+   - Intertemporal substitution (savings vs consumption)
+
+5. **Quality Differentiation:**
+   - Extend Armington to include quality ladders
+   - Higher prices may signal higher quality, not just tariffs
+
+---
+
+## References and Data Sources
+
+**Theoretical Foundation:**
+- Armington, P. S. (1969). "A Theory of Demand for Products Distinguished by Place of Production."
+- Hertel, T. W. (1997). "Global Trade Analysis: Modeling and Applications." GTAP Book.
+- Deaton, A., & Muellbauer, J. (1980). "Economics and Consumer Behavior."
+
+**Empirical Elasticities:**
+- Broda, C., & Weinstein, D. E. (2006). "Globalization and the Gains from Variety." QJE.
+- GTAP Database: https://www.gtap.agecon.purdue.edu/
+- Imbs, J., & Mejean, I. (2015). "Elasticity Optimism." AEJ: Macro.
+
+**Data Sources:**
+- WIOD (World Input-Output Database): http://www.wiod.org/
+- OECD ICIO (Inter-Country Input-Output): https://www.oecd.org/sti/ind/inter-country-input-output-tables.htm
+- UN Comtrade: https://comtrade.un.org/
+- World Bank Household Surveys: https://microdata.worldbank.org/
+
+---
+
+**End of Demand Module Specification**
