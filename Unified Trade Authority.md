@@ -1,7 +1,7 @@
 # Unified Trade Authority
 
 # Summary of the original [Manifesto](https://medium.com/@rossbrodskiy/unified-trade-authority-a-manifesto-for-fair-and-strategic-global-trade-c8bed4b2d494)
-## **Simulation :** Link(UTA/UTA%20Simulation.md)
+## **Simulation :** [Link](UTA/UTA%20Simulation.md)
 **Thesis**
 The current global trade system is failing: WTO is gridlocked, ad-hoc alliances are piecemeal, and trade rules don’t adequately address sovereignty, climate, labor, or strategic coercion. Brodskiy proposes the **Unified Trade Authority (UTA)** as a next-generation institution to restore fairness and structure.
 ---
