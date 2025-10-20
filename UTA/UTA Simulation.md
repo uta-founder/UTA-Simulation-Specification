@@ -7,9 +7,41 @@
 - Replace today’s broken system of **uncoordinated sanctions, weaponized tariffs, and unilateral coercion**
 - Introduce a **rules-based global trade enforcement framework (UTA Protocol)** with **credits, enforcement mechanisms, and AI-driven monitoring**
 - Allow **states to compete, cooperate, or attempt to cheat**—and see **real economic consequences** under a common architecture
-
 ---
+### Major Components:
 
+[Country Move](UTA%20Simulation/Country%20Move.md)
+
+[Firm vs State Actions](UTA%20Simulation/Firm%20vs%20State%20Actions.md)
+
+[Impact propagation mechanics](UTA%20Simulation/Impact%20propagation%20mechanics.md)
+
+[**Simplified Product Object**](UTA%20Simulation/Simplified%20Product%20Object.md)
+
+[Reaction to Macro Events Engine](UTA%20Simulation/Reaction%20to%20Macro%20Events%20Engine.md)
+
+[**Technical Foundation**](UTA%20Simulation/Technical%20Foundation.md)
+
+[Equilibrium Solver](UTA%20Simulation/Equilibrium%20Solver.md)
+
+[Demand Module](UTA%20Simulation/Demand%20Module.md)
+
+[Pricing & Market Equilibrium Module](UTA%20Simulation/Pricing%20&%20Market%20Equilibrium%20Module.md)
+
+[**Trade Flow Module**](UTA%20Simulation/Trade%20Flow%20Module.md)
+
+[**Subsidy & Industrial Policy Module**](UTA%20Simulation/Subsidy%20&%20Industrial%20Policy%20Module.md)
+
+[**Sanctions & Geopolitics Module**](UTA%20Simulation/Sanctions%20&%20Geopolitics%20Module.md)
+
+[**Energy & Logistics Module**](UTA%20Simulation/Energy%20&%20Logistics%20Module.md)
+
+[**Compliance & Cheating Detection Module**](UTA%20Simulation/Compliance%20&%20Cheating%20Detection%20Module.md)
+
+[Технические Задания](UTA%20Simulation/Технические%20Задания.md)
+
+[**Agent Intelligence Module**](UTA%20Simulation/Agent%20Intelligence%20Module.md)
+---
 ## **What the Simulation Must Do**
 
 **Model countries as strategic agents** that:
@@ -129,30 +161,3 @@
 - Modeled visually after trading terminals, IMF dashboards, and strategic command centers.
 - Must feel *serious, data-rich, high-stakes* — like running a national economic war room.
 
-# Major Components:
-
-[Country Move](UTA%20Simulation/Country%20Move.md)
-[Firm vs State Actions](UTA%20Simulation/Firm%20vs%20State%20Actions.md)
-[Impact propagation mechanics](UTA%20Simulation/Impact%20propagation%20mechanics.md)
-[**Simplified Product Object**](UTA%20Simulation/Simplified%20Product%20Object.md)
-[Reaction to Macro Events Engine](UTA%20Simulation/Reaction%20to%20Macro%20Events%20Engine.md)
-[**Technical Foundation**](UTA%20Simulation/Technical%20Foundation.md)
-[Equilibrium Solver](UTA%20Simulation/Equilibrium%20Solver.md)
-
-[Demand Module](UTA%20Simulation/Demand%20Module.md)
-
-[Pricing & Market Equilibrium Module](UTA%20Simulation/Pricing%20&%20Market%20Equilibrium%20Module.md)
-
-[**Trade Flow Module**](UTA%20Simulation/Trade%20Flow%20Module.md)
-
-[**Subsidy & Industrial Policy Module**](UTA%20Simulation/Subsidy%20&%20Industrial%20Policy%20Module.md)
-
-[**Sanctions & Geopolitics Module**](UTA%20Simulation/Sanctions%20&%20Geopolitics%20Module.md)
-
-[**Energy & Logistics Module**](UTA%20Simulation/Energy%20&%20Logistics%20Module.md)
-
-[**Compliance & Cheating Detection Module**](UTA%20Simulation/Compliance%20&%20Cheating%20Detection%20Module.md)
-
-[Технические Задания](UTA%20Simulation/Технические%20Задания.md)
-
-[**Agent Intelligence Module**](UTA%20Simulation/Agent%20Intelligence%20Module.md)
