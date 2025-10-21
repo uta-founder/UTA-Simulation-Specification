@@ -8,39 +8,33 @@
 - Introduce a **rules-based global trade enforcement framework (UTA Protocol)** with **credits, enforcement mechanisms, and AI-driven monitoring**
 - Allow **states to compete, cooperate, or attempt to cheat**—and see **real economic consequences** under a common architecture
 ---
-### Major Components:
+### Major Game Components:
+1. [Country Move - Complete Action Space](UTA%20Simulation/Country%20Move.md)
+2. [Firm vs State Actions](UTA%20Simulation/Firm%20vs%20State%20Actions.md)
+3. [Technical Foundation](UTA%20Simulation/Technical%20Foundation.md)
+4. [Impact propagation mechanics](UTA%20Simulation/Impact%20propagation%20mechanics.md)
+5. [Simplified Product Object](UTA%20Simulation/Simplified%20Product%20Object.md)
+6. [Reaction to Macro Events Engine](UTA%20Simulation/Reaction%20to%20Macro%20Events%20Engine.md)
+7. [UI Overview high level spec](UTA%20Simulation\UIParams.md)
 
-[Country Move](UTA%20Simulation/Country%20Move.md)
 
-[Firm vs State Actions](UTA%20Simulation/Firm%20vs%20State%20Actions.md)
+### Simulation Modules
+1. [Equilibrium Solver](UTA%20Simulation/Equilibrium%20Solver.md)
+2. [Demand Module](UTA%20Simulation/Demand%20Module.md)
+3. [Pricing & Market Equilibrium Module](UTA%20Simulation/Pricing%20&%20Market%20Equilibrium%20Module.md)
+4. [Trade Flow Module](UTA%20Simulation/Trade%20Flow%20Module.md)
+5. [Subsidy & Industrial Policy Module](UTA%20Simulation/Subsidy%20&%20Industrial%20Policy%20Module.md)
+6. [Sanctions & Geopolitics Module](UTA%20Simulation/Sanctions%20&%20Geopolitics%20Module.md)
+7. [Energy & Logistics Module](UTA%20Simulation/Energy%20&%20Logistics%20Module.md)
+8. [Compliance & Cheating Detection Module](UTA%20Simulation/Compliance%20&%20Cheating%20Detection%20Module.md)
+9. [Agent Intelligence Module](UTA%20Simulation/Agent%20Intelligence%20Module.md)
 
-[Impact propagation mechanics](UTA%20Simulation/Impact%20propagation%20mechanics.md)
+### Authored White Papers, thus far
 
-[**Simplified Product Object**](UTA%20Simulation/Simplified%20Product%20Object.md)
+1. [Equilibrium Solver: Implementation Guide for Unified Trade Authority, GPU-Accelerated CGE](UTA%20Simulation/WhitePapers/GPU-Accelerated%20CGE%20Equilibrium%20Solver.md)
+2. [Demand Module: Trade Policy Simulation: Technical Implementation Specifications](UTA%20Simulation/WhitePapers/Real-Time-MarketEquilibrium-Solver.md)
+3. [Trade Flow Simulation Algorithms for Policy Analysis](UTA%20Simulation/WhitePapers/Trade%20Flow%20Simulation%20Algorithms%20for%20Policy%20Analysis.md)
 
-[Reaction to Macro Events Engine](UTA%20Simulation/Reaction%20to%20Macro%20Events%20Engine.md)
-
-[**Technical Foundation**](UTA%20Simulation/Technical%20Foundation.md)
-
-[Equilibrium Solver](UTA%20Simulation/Equilibrium%20Solver.md)
-
-[Demand Module](UTA%20Simulation/Demand%20Module.md)
-
-[Pricing & Market Equilibrium Module](UTA%20Simulation/Pricing%20&%20Market%20Equilibrium%20Module.md)
-
-[**Trade Flow Module**](UTA%20Simulation/Trade%20Flow%20Module.md)
-
-[**Subsidy & Industrial Policy Module**](UTA%20Simulation/Subsidy%20&%20Industrial%20Policy%20Module.md)
-
-[**Sanctions & Geopolitics Module**](UTA%20Simulation/Sanctions%20&%20Geopolitics%20Module.md)
-
-[**Energy & Logistics Module**](UTA%20Simulation/Energy%20&%20Logistics%20Module.md)
-
-[**Compliance & Cheating Detection Module**](UTA%20Simulation/Compliance%20&%20Cheating%20Detection%20Module.md)
-
-[Технические Задания](UTA%20Simulation/Технические%20Задания.md)
-
-[**Agent Intelligence Module**](UTA%20Simulation/Agent%20Intelligence%20Module.md)
 ---
 ## **What the Simulation Must Do**
 
@@ -48,7 +42,7 @@
 
 - Produce, trade, subsidize, manipulate currency, form alliances, or cheat
 - Are governed by real economic constraints (supply, demand, cost structure, trade flows, CGE equilibrium)
-- Interact under rules enforced by a **Unified Trade Authority system**
+- Interact under rules enforced by a **Unified Trade Authority System** 
 
 **Key Mechanisms to Include:**
 
@@ -59,105 +53,13 @@
 - **Detection and enforcement engines** that simulate cheating, subsidies, origin laundering, currency manipulation
 - **Geopolitical constraints**: red lines, alliance dynamics, non-kinetic warfare
 
-# **UI Overview (High-Level Screens & Modules)**
-
-## **1. Global Dashboard (Home Screen)**
-
-**Purpose:** Central command interface showing the live state of the world.
-
-- Global economic heatmap
-- Live compliance index by nation
-- Trade balance flows visualized as dynamic network graph
-- Global alerts: sanctions, cheating events detected, enforcement actions
-
----
-
-## **2. Nation Control Panel**
-
-**Purpose:** Where users (or AI agents) manage strategy for a single country.
-
-- Current GDP, credits, tariffs, resources, alliances
-- Strategic action panel: Raise tariffs, invest in enforcement, form alliance, attempt covert move
-- Risk forecast and projected impact
-- Diplomatic messaging center (offers, threats, negotiations)
-
----
-
-## **3. Strategy Input Screen**
-
-**Purpose:** Core interaction layer – where economists or agents *input their move for the round.*
-
-- Prompts accepted in natural language or dropdown templates
-- “Reasoning Preview” – system shows expected outcomes before execution
-- Option to switch between **Manual Mode** (human) and **Agent Mode** (autonomous AI strategy)
-
----
-
-## **4. Round Outcome & Enforcement Panel**
-
-**Purpose:** Displays what happened after all nations submitted moves.
-
-- Automated enforcement actions
-- Tariff-credit redistribution
-- Cheating detection reports (with probability of discovery)
-- Leaderboard impact: gains/losses in influence, GDP, compliance
-
----
-
-## **5. Treaty & Alliance Marketplace**
-
-**Purpose:** Diplomatic negotiation hub.
-
-- Propose alliances, economic corridors, shared enforcement blocks
-- Trade guarantees, compliance pooling, retaliation agreements
-- Visual UI to drag-and-drop countries into blocs and see projected outcomes
-
----
-
-## **6. Simulation Replay & Scenario Builder**
-
-**Purpose:** For analysts and academics to run multiple hypothetical futures.
-
-- Build custom geopolitical scenarios (“China increases rare earth export control”, “US initiates digital tariff program”, etc.)
-- Run batch simulations with AI-controlled agents
-- Export results to CSV or presentation-ready summaries
-
----
-
-## **7. Agent Management Console (Developer / Power User Mode)**
-
-**Purpose:** Developer-facing view to assign, train, and monitor intelligent agents.
-
-- Agent registry (list of all active agent models per nation)
-- Real-time decisions taken by each agent
-- Performance scoring and win/loss rates
-- Upload custom strategies / large-language-model personalities
-
----
-
-## **8. Economic Metrics & Analytics Lab**
-
-**Purpose:** Deep-dive analytics for professionals.
-
-- Charts: GDP trajectory, compliance trends, trade dependency graphs
-- Stress tests and shock event simulations
-- “What-if” input box with instant projections
-
----
-
-## **9. Leaderboard & Prestige Index**
-
-**Purpose:** Gamification layer that drives engagement.
-
-- Shows economic dominance, trade credibility score, enforcement reliability
-- Tracks both nations and players (if multiplayer)
-- Visibility into alternative strategy outcomes
-
----
-
-### **Overall Design Philosophy**
-
-- **Not a game UI.** A *geo-economic simulation dashboard.*
-- Modeled visually after trading terminals, IMF dashboards, and strategic command centers.
-- Must feel *serious, data-rich, high-stakes* — like running a national economic war room.
-
+[Expert Human in the loop Assimnents](/UTA/Archive/Технические%20Задания.md)
+## Expert Assimnents
+1. [Behavioral and Systems Analyst](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Behavioral%20and%20Systems%20Analyst.md)
+2. [Economist](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Economist.md)
+3. [Energy Analyst](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Energy%20Analyst.md)
+4. [Financial and Currency Strategist](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Financial%20and%20Currency%20Strategist.md)
+5. [Geopolitical Strategist](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Geopolitical%20Strategist.md)
+6. [Military Analyst](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Military%20Analyst.md)
+## Future
+[Post Simulation work](UTA%20Simulation/Post-SimulationWork.md)
