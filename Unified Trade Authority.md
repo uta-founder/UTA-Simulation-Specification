@@ -1,14 +1,15 @@
 # Unified Trade Authority
-
-# Summary of the original [Manifesto](https://medium.com/@rossbrodskiy/unified-trade-authority-a-manifesto-for-fair-and-strategic-global-trade-c8bed4b2d494)
-## Thesis
+---
+### Summary of the original [Manifesto:](https://medium.com/@rossbrodskiy/unified-trade-authority-a-manifesto-for-fair-and-strategic-global-trade-c8bed4b2d494)
+---
+## UTA Thesis
 ---
 The current global trade system is failing: WTO is gridlocked, ad-hoc alliances are piecemeal, and trade rules don’t adequately address sovereignty, climate, labor, or strategic coercion. Brodskiy proposes the Unified Trade Authority (UTA) as a next-generation institution to restore fairness and structure.
----
-[Detailed Simulation Design](/UTA/UTA%20Simulation.md)
----
 
-**Core Components of UTA**
+---
+## Detailed Simulation Design [Here:](/UTA/UTA%20Simulation.md)
+---
+### **Core Components of UTA**
 1. **Governance Structure (Tripartite Council / T3C)**
     - Divides membership into three blocs: Atlantic-Pacific (advanced economies), Strategic South (emerging/developing), and Continental Sovereignty (powers asserting strategic autonomy).
     - Leadership rotates every two years among blocs.
@@ -36,11 +37,9 @@ The current global trade system is failing: WTO is gridlocked, ad-hoc alliances 
     - Faster, credible dispute resolution backed by enforcement.
     - Development funding, infrastructure support, and technical assistance tied to compliance.
     - A framework that aligns trade with sustainability, human rights, security, and resilience.
----
-**Risks, Challenges, & Safeguards**
-- Risk of dominance by large powers: mitigated by rotating leadership, bloc voting, and balanced internal weighting.
-- Accusations of disguised protectionism: addressed via transparent rules and equal application.
-- Burden on developing states: offset via aid, capacity building, and a transitional membership model.
-- Technological, surveillance, and enforcement overhead: UTA assumes investment in modern monitoring (satellite, AI) is necessary to make rules credible.
-# Major Phases to real world adoption
-### TBA
+
+6. **Risks, Challenges, & Safeguards**
+    - Risk of dominance by large powers: mitigated by rotating leadership, bloc voting, and balanced internal weighting.
+    - Accusations of disguised protectionism: addressed via transparent rules and equal application.
+    - Burden on developing states: offset via aid, capacity building, and a transitional membership model.
+    - Technological, surveillance, and enforcement overhead: UTA assumes investment in modern monitoring (satellite, AI) is necessary to make rules credible.
