@@ -43,3 +43,4 @@ The current global trade system is failing: WTO is gridlocked, ad-hoc alliances 
 - Burden on developing states: offset via aid, capacity building, and a transitional membership model.
 - Technological, surveillance, and enforcement overhead: UTA assumes investment in modern monitoring (satellite, AI) is necessary to make rules credible.
 # Major Phases to real world adoption
+### TBA
