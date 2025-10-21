@@ -5,6 +5,9 @@
 **Thesis**
 The current global trade system is failing: WTO is gridlocked, ad-hoc alliances are piecemeal, and trade rules don’t adequately address sovereignty, climate, labor, or strategic coercion. Brodskiy proposes the **Unified Trade Authority (UTA)** as a next-generation institution to restore fairness and structure.
 ---
+[Detailed Simulation Design](/UTA/UTA%20Simulation.md)
+---
+
 **Core Components of UTA**
 1. **Governance Structure (Tripartite Council / T3C)**
     - Divides membership into three blocs: Atlantic-Pacific (advanced economies), Strategic South (emerging/developing), and Continental Sovereignty (powers asserting strategic autonomy).
@@ -40,7 +43,3 @@ The current global trade system is failing: WTO is gridlocked, ad-hoc alliances 
 - Burden on developing states: offset via aid, capacity building, and a transitional membership model.
 - Technological, surveillance, and enforcement overhead: UTA assumes investment in modern monitoring (satellite, AI) is necessary to make rules credible.
 # Major Phases to real world adoption
-
-
-
-[Post Simulation Work (papers, PhDs and tournaments)](UTA/Post%20Simulation%20Work%20(papers,%20PhDs%20and%20tournaments).md)

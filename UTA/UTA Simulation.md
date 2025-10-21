@@ -7,6 +7,7 @@
 - Replace today’s broken system of **uncoordinated sanctions, weaponized tariffs, and unilateral coercion**
 - Introduce a **rules-based global trade enforcement framework (UTA Protocol)** with **credits, enforcement mechanisms, and AI-driven monitoring**
 - Allow **states to compete, cooperate, or attempt to cheat**—and see **real economic consequences** under a common architecture
+- Players can propose new custom Strategies or new Military that are analyzed, visualized as mermaid flowcharts, converted to executable code by Claude-Code API, and then shared as tradable algorithms with transparent logic
 ---
 ### Major Game Components:
 1. [Country Move - Complete Action Space](UTA%20Simulation/Country%20Move.md)
@@ -39,7 +40,6 @@
 ## **What the Simulation Must Do**
 
 **Model countries as strategic agents** that:
-
 - Produce, trade, subsidize, manipulate currency, form alliances, or cheat
 - Are governed by real economic constraints (supply, demand, cost structure, trade flows, CGE equilibrium)
 - Interact under rules enforced by a **Unified Trade Authority System** 
@@ -53,7 +53,6 @@
 - **Detection and enforcement engines** that simulate cheating, subsidies, origin laundering, currency manipulation
 - **Geopolitical constraints**: red lines, alliance dynamics, non-kinetic warfare
 
-[Expert Human in the loop Assimnents](/UTA/Archive/Технические%20Задания.md)
 ## Expert Assimnents
 1. [Behavioral and Systems Analyst](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Behavioral%20and%20Systems%20Analyst.md)
 2. [Economist](/UTA/UTA%20Simulation/TechnicalAssigments-TZ/Economist.md)

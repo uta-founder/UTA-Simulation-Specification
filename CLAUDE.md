@@ -2,228 +2,263 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Repository Overview
 
-The **Unified Trade Authority (UTA)** is a comprehensive geo-economic simulation platform designed to model next-generation global trade governance. This repository contains documentation and specifications for building an agent-based modeling system that simulates countries, firms, trade flows, and enforcement mechanisms under a unified rule-based framework.
+This is the **UTA (Unified Trade Authority) Simulation Specification** repository - a comprehensive economic simulation modeling global trade enforcement, geopolitical strategy, and agent-based decision-making. The project aims to create a credible, policy-relevant geo-economic modeling platform grounded in rigorous Computable General Equilibrium (CGE) theory.
 
-The project aims to replace the current fragmented system of uncoordinated sanctions and weaponized tariffs with a transparent, rules-based architecture featuring credit systems, AI-driven monitoring, and strategic economic gameplay.
+**Key Goal**: Model countries as strategic agents that produce, trade, subsidize, manipulate currency, form alliances, or cheat under rules enforced by a Unified Trade Authority System with real economic consequences.
 
-## Repository Structure
+## Project Structure
 
-- **`UTA/UTA Simulation/`** - Core simulation design specifications
-  - Module specifications for different economic systems (trade, sanctions, compliance, energy, etc.)
-  - Technical foundation documents outlining implementation approach
-  - Agent intelligence and behavior specifications
-  - `TechnicalAssigments(TZ)/` - Role-specific technical assignments (in Russian) for economists, strategists, military analysts, financial strategists, energy analysts, and behavioral analysts
+```
+UTA-Simulation-Specification/
+├── UTA/
+│   ├── UTA Simulation.md                    # Main entry point - overview of all components
+│   └── UTA Simulation/
+│       ├── Technical Foundation.md          # Implementation roadmap & data setup
+│       ├── Country Move.md                  # Complete action space for countries
+│       ├── Firm vs State Actions.md         # Distinction between firm-level and state actions
+│       ├── Impact propagation mechanics.md  # How effects cascade through the system
+│       ├── Reaction to Macro Events Engine.md
+│       ├── Simplified Product Object.md
+│       ├── UIParams.md                      # High-level UI specification
+│       │
+│       ├── [Economic Modules]
+│       ├── Demand Module.md                 # ✅ Production-ready (780 lines)
+│       ├── Pricing & Market Equilibrium Module.md  # ✅ Production-ready (908 lines)
+│       ├── Trade Flow Module.md             # ✅ Comprehensive spec
+│       ├── Subsidy & Industrial Policy Module.md   # ✅ Complete
+│       ├── Sanctions & Geopolitics Module.md       # ✅ Complete
+│       ├── Energy & Logistics Module.md            # ✅ Complete
+│       ├── Compliance & Cheating Detection Module.md  # ✅ Complete
+│       ├── Agent Intelligence Module.md     # Brief - agentic LLM strategy implementation
+│       │
+│       ├── WhitePapers/                     # Academic-level implementation guides
+│       ├── DeepResearchPrompts/             # Research prompts for deep dives
+│       ├── Personas/                        # Research personas (e.g., Dr. Maya Patel)
+│       └── TechnicalAssigments-TZ/          # Expert assignments (Economist, Energy Analyst, etc.)
+│
+├── SpecOps/                                 # Project management & validation
+│   ├── VALIDATION-REPORT-Phase1-Complete.md # Comprehensive progress report
+│   ├── cge-game-logic-implementer-BASE1-todo.md  # 42-day implementation roadmap
+│   └── GameContentTodo.md                   # Original task list
+│
+└── Unified Trade Authority.md               # Original manifesto & thesis
 
-- **`UTA/Post Simulation Work (papers, PhDs and tournaments)/`** - Research and validation phase documentation
-  - Plans for academic papers, stress testing, and policy advocacy
-  - Intellectual network building strategies
-
-- **`Unified Trade Authority.md`** - High-level manifesto and core components of the UTA framework
-
-- **`CLEANUP_SUMMARY.md`** - Documentation of repository cleanup (removed Notion GUIDs, updated links, identified empty files needing content)
-
-## System Architecture (Planned)
-
-### Core Technical Stack (Not Yet Implemented)
-- **Framework**: Mesa (Python agent-based modeling)
-- **Economic Data**: WIOD (World Input-Output Database) or OECD ICIO datasets
-- **Data Processing**: pymrio for multi-regional input-output tables
-- **Countries**: Modeled as strategic agents with production, trade, and policy capabilities
-- **Firms**: Micro-level agents representing producers with capacity, elasticity, and cheating propensity
-- **Products**: Simplified objects with cost structures, strategic importance, and supply-demand parameters
-
-### Key Simulation Components
-
-1. **Agent System**
-   - Country agents with GDP, production capacity, trade flows, policy levers, and compliance status
-   - Firm agents with production capacity, market share, state affiliation, and strategic decision-making
-   - Two-level interaction: states set policy, firms execute with potential for circumvention
-
-2. **Economic Modules**
-   - **Equilibrium Solver**: Market-clearing with price discovery (Walrasian or Newton-Raphson)
-   - **Supply-Demand-Price System**: CGE-level realism with elasticities
-   - **Trade Flow Module**: Bilateral trade with transport costs and tariffs
-   - **Subsidy & Industrial Policy**: State interventions with propagation effects
-   - **Pricing & Market Equilibrium**: Dynamic price adjustments based on supply shocks
-
-3. **Enforcement & Compliance**
-   - Tariff-credit system (violations issue credits; compliance earns credits)
-   - Detection engines for shadow fleets, commodity laundering, sanctions evasion, currency manipulation
-   - Probabilistic cheating and discovery mechanics
-   - Enforcement capacity as a strategic investment
-
-4. **Geopolitical Layer**
-   - Alliance formation and bloc dynamics
-   - Sanctions and counter-sanctions
-   - Strategic resource dependencies
-   - Reputation and influence metrics
-
-5. **UI Concepts** (Not Implemented)
-   - Global Dashboard: Live compliance, trade flows, alerts
-   - Nation Control Panel: Strategy input and risk forecasting
-   - Treaty & Alliance Marketplace: Diplomatic negotiation hub
-   - Economic Metrics Lab: Deep analytics and stress tests
-   - Agent Management Console: AI agent configuration and monitoring
-   - Leaderboard: Economic dominance and credibility scoring
-
-## Economic Modeling Principles
-
-### Product Modeling
-Products are defined by **four strategic vectors**:
-1. **Production Elasticity**: How quickly supply responds to incentives
-2. **Substitutability**: Availability of alternatives
-3. **Transport & Storage Sensitivity**: Logistics complexity (pipeline, refrigerated, digital)
-4. **Strategic Leverage Index**: Dependency and power implications
-
-### Country Behavior
-Countries operate under different **behavioral regimes**:
-- **Cooperative**: Maximize shared benefits (e.g., EU internal trade)
-- **Protectionist**: Defend domestic markets (e.g., US-China tariffs)
-- **Aggressive**: Seek unilateral advantages (e.g., steel dumping)
-- **Survival**: Maintain currency stability (e.g., capital controls)
-
-### Firm-State Interaction
-- States set rules and incentives (tariffs, subsidies, bans, procurement)
-- Firms optimize profits within constraints (produce, reroute, reprice, hide origin, exploit transfer pricing)
-- Detection system catches anomalies: export volume-price ratios, input-output mismatches, sudden margin shifts
-- Key parameters per firm: `capacity`, `capex_lead_time`, `margin_target`, `export_share`, `opacity_score`, `propensity_to_cheat`
-
-### Detection Signatures for Cheating
-- Export price-volume anomalies
-- Input import vs. final product export mismatches
-- Triangulation (re-routing through third countries)
-- Transfer pricing exploitation
-- Sudden margin swings
-- Partner report asymmetries
+```
 
 ## Development Phases
 
-### Phase 1-2: Foundation (Current Documentation Stage)
-- Environment setup with Mesa framework
-- Load real economic data (WIOD/OECD ICIO)
-- Select starter countries (US, China, Canada, Japan, Germany)
-- Extract key sectors (steel, energy, agriculture, manufacturing, tech)
+The project follows a structured 42-day implementation plan across 4 phases:
 
-### Phase 3: Core Model
-- Define country agents with production capacity, trade flows, and policy levers
-- Build world model with trade matrices and enforcement logic
-- Integrate MRIO data with agent decision-making
+### Phase 1: Core Economic Modules (Days 1-12) ✅ COMPLETE
+- Demand Module (Armington CES, LES demand system)
+- Pricing & Market Equilibrium Module (Walrasian clearing, CGE solver)
+- Equilibrium Solver integration with pymrio
 
-### Phase 4: Prototype Scenarios
-- Implement basic policy actions (e.g., "Canada triples steel production")
-- Calculate trade impacts, price changes, market share shifts
-- Demonstrate UTA credit score changes
+**Status**: Phase 1 is production-ready with comprehensive specifications (~1688 lines of spec)
 
-### Phase 4.5: Research & Validation (Future)
-- Publish peer-reviewed papers
-- Add advanced financial layer (derivatives, CDS, sovereign debt, FX markets)
-- Conduct adversarial tournaments
-- Stress testing and systemic risk analysis
-- Policy advocacy and institutional engagement
+### Phase 2: Policy & Intervention Modules (Days 13-20)
+- Subsidy & Industrial Policy Module
+- Sanctions & Geopolitics Module
 
-### Phase 5: Policy Influence (Future)
-- Public conferences and outreach
-- Policy briefs and workshops
-- Positioning UTA as a credible successor framework
+### Phase 3: Strategic Infrastructure (Days 21-30)
+- Energy & Logistics Module
+- Compliance & Cheating Detection Module
 
-## Key Technical Challenges
+### Phase 4: Agent Intelligence & Behavioral (Days 31-42)
+- Agent Intelligence Module (LLM-driven strategy generation)
+- Behavioral & Systems Analyst integration
+- Game-theoretic formalization
 
-1. **Equilibrium Solving**: Balance between full CGE realism and computational tractability
-2. **Firm-Level Detail**: Represent enough granularity to catch circumvention without modeling every SKU
-3. **Detection Engine**: Probabilistic audit with ratio tests and anomaly detection
-4. **Agent Intelligence**: LLM-based strategic reasoning with economic grounding
-5. **Data Calibration**: Real trade flows, elasticities, lead times, and cost structures
-6. **Cheating Mechanics**: Realistic incentive structures where short-term cheating is costly long-term
+## Key Economic Frameworks
 
-## Important Notes
+### CGE (Computable General Equilibrium) Foundation
+The simulation is built on rigorous CGE theory:
+- **Armington Aggregation**: CES function for origin-differentiated products
+- **Walrasian Market Clearing**: Supply = Demand for all products in all countries
+- **Zero-Profit Conditions**: P = MC under perfect competition
+- **Factor Market Clearing**: Full employment of labor and capital
+- **Walras' Law**: Budget constraints satisfied across all agents
 
-### No Code Yet
-This repository currently contains **specifications and design documents only**. No implementation code exists. The technical foundation describes using:
-- Mesa for agent-based modeling
-- pymrio for MRIO data processing
-- Python as the primary language
-- Modular architecture separating agents, model, data, policies, and simulation runner
+### Data Sources
+- **WIOD** (World Input-Output Database)
+- **OECD ICIO** (Inter-Country Input-Output tables)
+- **UN Comtrade** (bilateral trade flows)
+- **World Bank** (national accounts, elasticities)
+- **GTAP Database** (substitution elasticities: 1.3-5.0 range)
 
-### Multilingual Documentation
-Technical assignments (TZ) are primarily in Russian, reflecting the international nature of the project team. Core architectural documents are in English.
+### Key Parameters
+- Substitution elasticities: 1.3 (strategic goods) to 5.0 (commodities)
+- Income elasticities: 0.3 (necessities) to 2.0 (luxuries)
+- Solver tolerance: 1e-6 (0.0001% relative excess demand)
+- Convergence: R² > 0.90 for trade share replication
 
-### Agent-Driven Strategy Development
-The vision includes "agentic coding" where players can propose new strategies in natural language, which are then:
-1. Analyzed for feasibility and impact
-2. Presented as strategy flowcharts
-3. Converted to executable code upon approval
-4. Saved and optionally shared (algorithmic trading with known algorithms)
+## Module Integration Architecture
 
-### Realism Requirements
-- Use real trade data (WIOD, OECD ICIO)
-- Calibrate elasticities from empirical research
-- Model actual sectoral dependencies
-- Validate against historical episodes
-- Maintain economic constraints (supply, demand, cost structure, CGE equilibrium)
+**Central Hub**: Pricing & Market Equilibrium Module
+- Receives excess demand/supply from all sectors
+- Sends equilibrium prices to all agents
+- Iterative Gauss-Seidel or tâtonnement convergence
 
-### Strategic Design Philosophy
-- Not a game UI but a "geo-economic simulation dashboard"
-- Modeled after trading terminals, IMF dashboards, strategic command centers
-- Serious, data-rich, high-stakes feel
-- Credible enough for policy evaluation
+**Integration Flow**:
+1. Demand Module → quantities demanded → Pricing Module
+2. Pricing Module → equilibrium prices → Demand Module
+3. Trade Flow Module ↔ bilateral flows ↔ Demand & Pricing
+4. Sanctions Module → trade restrictions → Trade Flow
+5. Subsidy Module → cost adjustments → Pricing
+6. Energy Module → transport costs → Trade Flow
 
-## Development Workflow (When Implementation Begins)
+## Custom Claude Agents
 
-**Setup**:
-```bash
-# Install Mesa framework
-pip install mesa
+This repository uses specialized Claude agents (`.claude/agents/`):
 
-# Install pymrio for MRIO data
-pip install pymrio
+### `uta-simulation-architect`
+**Purpose**: Analyze UTA simulation specifications for completeness, identify gaps in economic modeling logic, validate consistency between modules, propose game mechanics grounded in economic theory.
+**Use when**: Reviewing module specifications, identifying missing components, validating cross-module consistency
 
-# Download WIOD or OECD ICIO dataset
-# (specific commands depend on data source)
-```
+### `cge-game-logic-implementer`
+**Purpose**: Translate country specifications and policy changes through CGE model, propagate effects with mass-balance and equilibrium constraints, convert policy descriptions into formal human-readable rules.
+**Use when**: Implementing policy rules, propagating economic effects, validating economic consistency
 
-**Project Structure** (Recommended):
-```
-UTA/
-├── agents/          # Country and firm agent definitions
-├── model/           # World model and simulation engine
-├── data/            # MRIO tables, cost parameters, calibration
-├── policies/        # Policy action implementations
-├── enforcement/     # Detection and compliance engines
-├── equilibrium/     # Market clearing and price discovery
-├── simulation/      # Simulation runner and orchestration
-├── ui/              # Visualization and dashboard (optional)
-└── tests/           # Unit and integration tests
-```
+### `uta-simulation-TZ-fixer`
+**Purpose**: Refine technical assignments (TZ) for human experts.
+**Use when**: Working with files in `TechnicalAssigments-TZ/` directory
 
-**Running Simulations** (Future):
-```python
-# Load world model with real trade data
-world = WorldModel.from_mrio("wiod_data.pkl")
+### `deep-research-orchestrator`
+**Purpose**: Conduct comprehensive research with persona development and structured investigation.
+**Use when**: Creating research prompts, developing personas, deep-diving into economic concepts
 
-# Initialize countries
-world.add_countries(["US", "China", "Canada", "Japan", "Germany"])
+## Working with Specifications
 
-# Apply policy scenario
-world.apply_policy("Canada", action="increase_production",
-                   sector="steel", factor=3.0)
+### Reading Module Specifications
+Each module follows a standard structure:
+1. **Economic Foundation** - Theory, formulas, assumptions
+2. **Implementation Specification** - Algorithms, data structures, pseudocode
+3. **Calibration & Data** - Parameter ranges, data sources, calibration procedures
+4. **Integration Points** - Inputs from/outputs to other modules
+5. **Strategic Gameplay** - Player-facing elements
+6. **Example Scenarios** - Concrete numerical walkthroughs
 
-# Run simulation step
-world.step()
+### When Modifying Specifications
+- Maintain economic rigor (ground in CGE/trade theory)
+- Provide clear mathematical formulations
+- Specify realistic parameter ranges from empirical literature
+- Define integration points explicitly
+- Include 2+ numerical example scenarios
+- Ensure consistency across modules
 
-# Analyze results
-impacts = world.get_trade_impacts()
-credits = world.get_uta_credits()
-```
 
-## Research Integration
+## Implementation Technology Stack
 
-When implementing components, refer to the detailed specifications in:
-- `UTA Simulation/Technical Foundation.md` - Setup and phases
-- `UTA Simulation/Economists.md` - Economic formalization requirements
-- `UTA Simulation/Firm vs State Actions.md` - Two-level agent interaction
-- `UTA Simulation/Equilibrium Solver.md` - Market clearing approaches
-- `UTA Simulation/Simplified Product Object.md` - Product data model
+### Core Framework
+- **Mesa** (agent-based modeling framework in Python)
+- **pymrio** (Python package for Multi-Regional Input-Output tables)
 
-Each major module has a corresponding specification file describing inputs, outputs, and economic logic.
+### Data Processing
+- WIOD/OECD ICIO data loading and transformation
+- Input-output coefficient extraction
+- Bilateral trade matrix construction
+
+### Solver Approaches
+1. **MVP**: Simple Tâtonnement (Walrasian price adjustment)
+2. **Intermediate**: Newton-Raphson with Jacobian
+3. **Advanced**: PATH Solver (Mixed Complementarity)
+4. **Recommended**: Hybrid Gauss-Seidel + Damped Tâtonnement
+
+### Agent Intelligence
+- LLM integration for strategy parsing
+- Agentic coding: players propose strategies → analyzed → flowchart → approved → implemented as code
+- Strategy sharing (like algorithmic trading with disclosed algorithms)
+
+## Git Workflow
+
+**Main Branch**: `main`
+
+**Current Status** (per git status at session start):
+- Phase 1 complete, validation report available
+- Archive cleanup completed (old Russian specifications removed)
+- Core modules production-ready
+
+## Validation & Testing
+
+### Economic Validation
+Test model's ability to replicate historical shocks:
+- 2018 US-China tariffs
+- 2022 Russia energy cutoffs to Europe
+- 2020 pandemic supply chain disruptions
+- **Target**: R² > 0.8 for scenario replication
+
+### Convergence Metrics
+- Market clearing: |Z/Q| < 0.0001 for all markets
+- Walras' Law: |Σ P*Z| < 0.001 * World GDP
+- Zero profit: P ≈ MC (±1% tolerance)
+- Factor market clearing: ±0.1%
+- Global trade balance: ±0.001% of world GDP
+
+## Key Concepts
+
+### UTA System Components
+1. **Tripartite Council (T3C)**: Three-bloc governance
+2. **Tariff-Credit Enforcement**: Replace tariffs with credit system
+3. **Detection Engines**: Shadow fleets, commodity laundering, sanctions evasion
+4. **Strategic Benefits**: Trade credits, compliance rewards, enforcement mechanisms
+
+### Strategic Gameplay Elements
+Players (countries) can:
+- Adjust tariffs, subsidies, quotas, sanctions
+- Manipulate currency (interest rates, FX intervention, reserves)
+- Implement industrial policy (R&D, SOE mandates)
+- Form alliances, coalitions, trade agreements
+- Execute military actions (blockades, cyberattacks, deterrence)
+- Cheat (origin laundering, transfer pricing) with detection risk
+- Use UTA credits and file disputes
+
+### Military & Non-Kinetic Actions
+All military actions have parameter vectors:
+`{economic_impact, detection_prob, attribution_prob, UTA_penalty, escalation_risk, duration}`
+
+Examples:
+- Naval blockade: -80% throughput, 100% detection, -1000 credits, 80% escalation risk
+- Cyber sabotage: variable impact, 60% detection, 40% attribution, -500 credits (if proven)
+- Show of force: -5% throughput, 100% visible, -50 credits, 15% escalation
+
+## Documentation Standards
+
+### For Economic Modules
+- Use LaTeX-style math notation in markdown
+- Provide both theoretical foundations and implementation guidance
+- Include parameter calibration procedures
+- Specify data requirements explicitly
+- Show numerical examples with full calculations
+
+### For Research Outputs
+- **White Papers**: Academic-level, full mathematical rigor
+- **Deep Research Prompts**: For creating white papers, MBA-friendly (flowcharts not formulas)
+- **Personas**: Research specialists (e.g., Dr. Maya Patel - Chief Research Translator)
+
+### Excluded Content
+Per `.gitignore`:
+- `/SpecOps` (project management, not for general distribution)
+- `/UTA/UTA Simulation/DeepResearchPrompts` (internal research scaffolding)
+
+## Future Work
+
+Per `UTA Simulation/Post-SimulationWork.md`:
+- Academic papers based on simulation results
+- PhD dissertation opportunities
+- Policy tournaments and scenario competitions
+- Real-world adoption pathway (see `Unified Trade Authority.md`)
+
+## References
+
+**Key Documents to Read First**:
+1. `UTA/UTA Simulation.md` - Start here for overview
+2. `SpecOps/VALIDATION-REPORT-Phase1-Complete.md` - Progress status
+3. `SpecOps/cge-game-logic-implementer-BASE1-todo.md` - Implementation roadmap
+4. `UTA/UTA Simulation/Technical Foundation.md` - Setup instructions
+
+**For Economic Context**:
+- Demand Module and Pricing & Market Equilibrium Module are reference implementations
+- Trade Flow Module shows comprehensive bilateral trade modeling
+- Country Move.md defines complete strategic action space
