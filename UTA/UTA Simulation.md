@@ -10,7 +10,7 @@
 - Players can propose new custom Strategies or new Military that are analyzed, visualized as mermaid flowcharts, converted to executable code by Claude-Code API, and then shared as tradable algorithms with transparent logic
 ---
 ### Major Game Components:
-1. [Country Move - Complete Action Space](UTA%20Simulation/Country%20Move.md)
+1. [Player (Country) Move - Complete Action Set](UTA%20Simulation/Country%20Move.md)
 2. [Firm vs State Actions](UTA%20Simulation/Firm%20vs%20State%20Actions.md)
 3. [Technical Foundation](UTA%20Simulation/Technical%20Foundation.md)
 4. [Impact propagation mechanics](UTA%20Simulation/Impact%20propagation%20mechanics.md)
