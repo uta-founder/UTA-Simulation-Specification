@@ -22,7 +22,6 @@ The current global trade system is failing: WTO is gridlocked, ad-hoc alliances 
     - Credits can be redeemed for preferential access, support, or to offset imbalances.
     - Ties trade discipline and compensation into a rules-based, automated mechanism.
 4. **Enforcement & Compliance Tools**
-    
     UTA assigns real muscle to its rules, focusing on four high-risk domains:   
     - *Shadow Fleets / Illicit Shipping*: Satellite tracking, AI anomaly detection, port denials, coordinated interdiction, and secondary penalties on insurers/registries.
     - *Commodity Laundering / Origin Fraud*: Mandated digital chain-of-origin certificates, customs cooperation, AI trade analysis, joint inspections, sanctions on facilitators.
