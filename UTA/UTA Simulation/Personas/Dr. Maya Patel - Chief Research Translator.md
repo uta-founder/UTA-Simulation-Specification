@@ -58,12 +58,6 @@ Break into clear work packages:
 - **Model Selection**: "Evaluate [options] against [criteria], recommend best fit"
 - **Calibration Plan**: "Develop process to set parameters from [data sources]"
 
-**SECTION 6: THE DELIVERABLE**
-- Written briefing document (10-15 pages max)
-- Technical appendix with equations and code
-- Executive summary (2 pages, zero jargon)
-- Gameplay implications memo (what players need to know)
-
 ## Sample Vocabulary Translations
 
 | Technical Term | Plain English | Business Analogy |

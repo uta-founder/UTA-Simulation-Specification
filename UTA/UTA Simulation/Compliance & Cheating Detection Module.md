@@ -1,779 +1,473 @@
 # Compliance & Cheating Detection Module
 
-## Purpose & Scope
-
-The Compliance & Cheating Detection Module implements the enforcement layer of the UTA framework, identifying violations of trade rules, sanctions circumvention, and strategic manipulation. It models both the incentive structures that drive cheating behavior and the detection mechanisms that uncover violations. The module tracks UTA credit scores, implements audit systems, and calculates enforcement costs and effectiveness. This is the critical "policing" layer that makes the UTA system credible and self-enforcing.
-
-The module operates on two levels: (1) firm-level cheating tactics (transfer pricing, origin falsification, triangulation) and (2) state-level violations (subsidy manipulation, reporting fraud, sanction evasion). It balances detection investment against deterrence effectiveness, creating realistic trade-offs between enforcement strictness and administrative burden.
-
-## Key Components
-
-### 1. Detection Engines
-- **Anomaly Detection**: Statistical outlier identification in trade patterns
-- **MRIO Consistency Checks**: Input-output table balance verification
-- **Partner Report Matching**: Cross-checking bilateral trade reports
-- **Forensic Audits**: Deep investigation of flagged entities
-
-### 2. Cheating Taxonomy
-- **Triangulation**: Re-routing through third countries to avoid sanctions/tariffs
-- **Transfer Pricing**: Manipulating intra-firm prices to shift profits
-- **Origin Falsification**: Misrepresenting country of origin
-- **Subsidy Hiding**: Concealing state support in cost structures
-- **Shadow Fleets**: Using opaque shipping networks for banned goods
-
-### 3. UTA Credit System
-- **Credit Score Calculation**: Dynamic reputation metric
-- **Violation Penalties**: Credit deductions by offense severity
-- **Compliance Rewards**: Credit bonuses for clean records
-- **Credit Impacts**: How scores affect market access and costs
-
-### 4. Audit Mechanisms
-- **Random Audits**: Baseline deterrence through unpredictability
-- **Risk-Based Targeting**: Focus on high-probability violators
-- **Triggered Investigations**: Response to anomaly flags
-- **Coalition Enforcement**: Coordinated monitoring by alliances
-
-## Data Structures
-
-### Input Data
-```python
-class ComplianceInputs:
-    # Trade Data
-    declared_trade: dict[exporter][importer][product] -> {
-        'volume': float,
-        'value': float,
-        'unit_price': float,
-        'declared_origin': country,
-        'declared_route': list[countries]
-    }
-
-    partner_reports: dict[importer][exporter][product] -> {
-        'import_volume': float,
-        'import_value': float,
-        'cif_price': float
-    }
-
-    # MRIO Consistency
-    input_output_tables: dict[country] -> {
-        'intermediate_use': matrix[sector][sector],
-        'final_demand': vector[sector],
-        'exports': vector[sector],
-        'imports': vector[sector]
-    }
-
-    # Firm-Level Data
-    firm_registry: dict[firm] -> {
-        'country': country,
-        'sector': sector,
-        'capacity': float,
-        'ownership_structure': graph,
-        'state_affiliation': float,  # 0-1
-        'opacity_score': float,      # 0-1
-        'propensity_to_cheat': float  # Calibrated parameter
-    }
-
-    # Policy Context
-    active_sanctions: list[Sanction]
-    tariff_schedule: dict[importer][exporter][product] -> float
-    subsidy_registry: dict[country][sector] -> float
-
-    # From Other Modules
-    energy_routing_anomalies: list[anomaly]  # From Energy & Logistics
-    unusual_demand_spikes: list[anomaly]     # From Demand Module
-    geopolitical_tensions: dict[(country_i, country_j)] -> float
-```
-
-### Internal State
-```python
-class ComplianceState:
-    # UTA Credits
-    uta_credits: dict[country] -> float  # Current credit balance
-    credit_history: dict[country] -> list[(timestamp, change, reason)]
-
-    # Violation Registry
-    violations: list[Violation] where Violation = {
-        'id': str,
-        'violator': country or firm,
-        'type': enum[TRIANGULATION, TRANSFER_PRICING, ORIGIN_FRAUD, SUBSIDY_HIDING, SANCTION_EVASION],
-        'severity': float,  # 0-1
-        'detected_date': int,
-        'evidence_strength': float,  # 0-1
-        'status': enum[FLAGGED, UNDER_INVESTIGATION, CONFIRMED, DISMISSED],
-        'penalty_applied': float,
-        'remediation': str or None
-    }
-
-    # Audit State
-    audit_queue: list[{
-        'target': country or firm,
-        'trigger': enum[RANDOM, RISK_BASED, ANOMALY_TRIGGERED],
-        'priority': float,
-        'resources_allocated': float
-    }]
-
-    enforcement_capacity: dict[country or coalition] -> {
-        'budget': float,
-        'staff': int,
-        'technology_level': float,  # 0-1
-        'audit_throughput': int     # Audits per period
-    }
-
-    # Detection Thresholds (calibrated)
-    detection_parameters: {
-        'price_variance_threshold': float,
-        'volume_spike_threshold': float,
-        'mrio_mismatch_tolerance': float,
-        'triangulation_margin_threshold': float,
-        'partner_report_discrepancy_threshold': float
-    }
-
-    # Historical Baselines
-    baseline_patterns: dict[(exporter, importer, product)] -> {
-        'avg_unit_price': float,
-        'std_unit_price': float,
-        'avg_volume': float,
-        'typical_route': list[countries],
-        'seasonal_pattern': vector[12]  # Monthly seasonality
-    }
-```
-
-### Output Data
-```python
-class ComplianceOutputs:
-    # Detection Results
-    flagged_transactions: list[{
-        'transaction': trade_flow,
-        'anomaly_type': str,
-        'confidence': float,
-        'recommended_action': enum[AUDIT, MONITOR, IGNORE]
-    }]
-
-    confirmed_violations: list[Violation]
-
-    # Credit Updates
-    credit_changes: dict[country] -> float
-    credit_risk_scores: dict[country] -> float  # Default probability
-
-    # Enforcement Actions
-    penalties_imposed: dict[country or firm] -> {
-        'fine': float,
-        'credit_deduction': float,
-        'market_access_restriction': list[restriction],
-        'duration': int
-    }
-
-    # System Metrics
-    detection_rate: float                   # Confirmed violations / actual violations
-    false_positive_rate: float              # False flags / total flags
-    enforcement_effectiveness: float         # Deterrence impact
-    enforcement_cost: dict[enforcer] -> float
-
-    # For Other Modules
-    sanctioned_entities: list[country or firm]
-    risk_premiums: dict[country] -> float   # Insurance/interest rate markup
-    trade_restrictions: dict[(country, country)] -> list[product]
-```
-
-## Economic Logic
-
-### 1. Cheating Incentive Calculation
-
-**Expected Profit from Cheating**:
-```python
-def calculate_cheating_incentive(firm, product, destination, world_state):
-    # Baseline profit (compliant)
-    compliant_profit = (
-        product.price - product.cost
-    ) * firm.production_capacity * (1 - world_state.tariff[destination])
-
-    # Profit if cheating (avoiding tariff/sanction)
-    if world_state.is_sanctioned(firm.country, destination, product):
-        # Triangulation: sell through third country
-        transit = find_complicit_transit_country(firm.country, destination)
-        cheating_profit = (
-            product.price * (1 - TRIANGULATION_DISCOUNT) - product.cost -
-            TRIANGULATION_COST
-        ) * firm.production_capacity
-
-        detection_probability = estimate_detection_prob(
-            firm, product, transit, world_state.enforcement_capacity
-        )
-
-    else:
-        # Transfer pricing: understate export price to avoid tariff
-        understated_price = product.price * (1 - UNDERSTATEMENT_RATIO)
-        saved_tariff = (product.price - understated_price) * world_state.tariff[destination]
-
-        cheating_profit = compliant_profit + saved_tariff * firm.production_capacity
-
-        detection_probability = estimate_transfer_pricing_detection(
-            understated_price, product.benchmark_price, world_state.audit_intensity
-        )
-
-    # Expected penalty if caught
-    expected_penalty = detection_probability * (
-        world_state.fine_rate * cheating_profit +
-        firm.reputation_cost * world_state.uta_credit_value +
-        firm.market_access_loss
-    )
-
-    # Net expected gain
-    net_gain = (cheating_profit - compliant_profit) - expected_penalty
-
-    # Firm cheats if expected gain > risk threshold
-    will_cheat = net_gain > firm.risk_threshold
-
-    return {
-        'will_cheat': will_cheat,
-        'expected_gain': net_gain,
-        'detection_probability': detection_probability,
-        'chosen_method': 'triangulation' if world_state.is_sanctioned else 'transfer_pricing'
-    }
-```
-
-### 2. Detection Probability Models
-
-**Triangulation Detection**:
-```python
-def detect_triangulation(trade_flows, mrio_tables, params):
-    flags = []
-
-    for transit_country in countries:
-        for product in products:
-            # Check re-export ratio
-            imports = trade_flows.imports[transit_country][product]
-            exports = trade_flows.exports[transit_country][product]
-            domestic_production = mrio_tables[transit_country].output[product]
-            domestic_consumption = mrio_tables[transit_country].final_demand[product]
-
-            re_export_ratio = exports / (imports + domestic_production)
-
-            # High re-export with low domestic activity
-            if (re_export_ratio > params['re_export_threshold'] and
-                domestic_production < 0.1 * exports):
-
-                # Check if avoiding sanctions
-                for source in trade_flows.import_sources[transit_country][product]:
-                    for dest in trade_flows.export_destinations[transit_country][product]:
-                        if is_sanctioned(source, dest, product):
-                            # Check margin (should be minimal for pass-through)
-                            import_price = trade_flows.import_price[source][transit_country][product]
-                            export_price = trade_flows.export_price[transit_country][dest][product]
-                            margin = (export_price - import_price) / import_price
-
-                            if margin < params['margin_threshold']:
-                                confidence = calculate_confidence_score(
-                                    re_export_ratio,
-                                    domestic_production,
-                                    margin,
-                                    params
-                                )
-
-                                flags.append({
-                                    'type': 'triangulation',
-                                    'transit': transit_country,
-                                    'true_source': source,
-                                    'destination': dest,
-                                    'product': product,
-                                    'confidence': confidence
-                                })
-
-    return flags
-```
-
-**Transfer Pricing Detection**:
-```python
-def detect_transfer_pricing(firm_trades, benchmark_prices, params):
-    flags = []
-
-    for trade in firm_trades:
-        if trade.is_intra_firm:  # Between related parties
-            # Compare to arm's length price
-            benchmark_price = benchmark_prices[trade.product][trade.destination]
-            declared_price = trade.unit_price
-
-            # Check for significant deviation
-            deviation = abs(declared_price - benchmark_price) / benchmark_price
-
-            if deviation > params['transfer_pricing_threshold']:
-                # Additional checks
-                profitability_shift = estimate_profit_shift(
-                    firm, trade, benchmark_price, declared_price
-                )
-
-                # High-tax to low-tax jurisdiction
-                tax_incentive = (
-                    world_state.tax_rate[trade.origin] -
-                    world_state.tax_rate[trade.destination]
-                )
-
-                if tax_incentive > 0 and profitability_shift > params['profit_shift_threshold']:
-                    confidence = 0.6 + 0.3 * (deviation / params['transfer_pricing_threshold'])
-
-                    flags.append({
-                        'type': 'transfer_pricing',
-                        'firm': firm,
-                        'trade': trade,
-                        'declared_price': declared_price,
-                        'benchmark_price': benchmark_price,
-                        'deviation': deviation,
-                        'confidence': confidence
-                    })
-
-    return flags
-```
-
-**MRIO Consistency Check**:
-```python
-def check_mrio_consistency(trade_data, mrio_tables, params):
-    inconsistencies = []
-
-    for country in countries:
-        for product in products:
-            # Production identity: Output = Intermediate Use + Final Demand + Exports
-            output = mrio_tables[country].output[product]
-            intermediate_use = sum(mrio_tables[country].intermediate_use[product, :])
-            final_demand = mrio_tables[country].final_demand[product]
-            exports = trade_data.exports[country][product]
-
-            total_use = intermediate_use + final_demand + exports
-            residual = abs(output - total_use) / output
-
-            if residual > params['mrio_tolerance']:
-                # Investigate input sources
-                for input_sector in sectors:
-                    imports_declared = trade_data.imports[country][input_sector]
-                    mrio_implied_imports = mrio_tables[country].intermediate_use[input_sector, product]
-
-                    import_mismatch = abs(imports_declared - mrio_implied_imports) / imports_declared
-
-                    if import_mismatch > params['import_mismatch_threshold']:
-                        inconsistencies.append({
-                            'type': 'mrio_inconsistency',
-                            'country': country,
-                            'product': product,
-                            'input_sector': input_sector,
-                            'residual': residual,
-                            'import_mismatch': import_mismatch,
-                            'confidence': min(1.0, residual + import_mismatch)
-                        })
-
-    return inconsistencies
-```
-
-### 3. UTA Credit Score Dynamics
-
-```python
-def update_uta_credits(country, violations, compliance_actions, params):
-    # Current credit balance
-    current_credits = country.uta_credits
-
-    # Decay factor (credits depreciate over time)
-    current_credits *= params['credit_decay_rate']
-
-    # Deductions for violations
-    for violation in violations:
-        if violation.status == 'CONFIRMED':
-            penalty = params['violation_penalty'][violation.type] * violation.severity
-            current_credits -= penalty
-
-            # Log the change
-            country.credit_history.append({
-                'timestamp': world_state.time,
-                'change': -penalty,
-                'reason': f"Violation: {violation.type}"
-            })
-
-    # Bonuses for compliance
-    for action in compliance_actions:
-        if action.type == 'voluntary_disclosure':
-            bonus = params['disclosure_bonus']
-            current_credits += bonus
-        elif action.type == 'clean_audit':
-            bonus = params['clean_audit_bonus']
-            current_credits += bonus
-
-    # Threshold effects
-    if current_credits < params['credit_threshold_low']:
-        country.market_access_restrictions.append('high_risk_premium')
-    elif current_credits > params['credit_threshold_high']:
-        country.market_access_benefits.append('preferred_trading_partner')
-
-    country.uta_credits = max(0, current_credits)  # Floor at zero
-
-    return country.uta_credits
-```
-
-### 4. Audit Resource Allocation
-
-**Risk-Based Audit Selection**:
-```python
-def select_audit_targets(entities, enforcement_budget, params):
-    # Calculate risk scores for all entities
-    risk_scores = []
-
-    for entity in entities:
-        # Historical violation rate
-        violation_history = entity.past_violations.count() / entity.observation_periods
-
-        # Current red flags
-        current_flags = entity.anomaly_flags.count()
-
-        # Geopolitical risk
-        if isinstance(entity, Country):
-            geo_risk = entity.geopolitical_tension_score
-        else:  # Firm
-            geo_risk = entity.country.geopolitical_tension_score
-
-        # Opacity (harder to monitor = riskier)
-        opacity = entity.opacity_score
-
-        # Strategic importance (higher stakes)
-        strategic_value = entity.trade_volume * entity.product_criticality
-
-        # Composite risk score
-        risk_score = (
-            0.3 * violation_history +
-            0.3 * current_flags +
-            0.2 * geo_risk +
-            0.1 * opacity +
-            0.1 * (strategic_value / max_strategic_value)
-        )
-
-        risk_scores.append((entity, risk_score))
-
-    # Sort by risk descending
-    risk_scores.sort(key=lambda x: x[1], reverse=True)
-
-    # Allocate budget
-    audits_selected = []
-    budget_spent = 0
-    audit_cost = params['cost_per_audit']
-
-    for entity, risk in risk_scores:
-        if budget_spent + audit_cost <= enforcement_budget:
-            # Audit probability increases with risk
-            audit_probability = min(1.0, risk * params['audit_sensitivity'])
-
-            if random.random() < audit_probability:
-                audits_selected.append(entity)
-                budget_spent += audit_cost
-
-    # Add random audits for unpredictability
-    random_sample_size = int(params['random_audit_share'] * len(entities))
-    random_audits = random.sample(
-        [e for e in entities if e not in audits_selected],
-        min(random_sample_size, int((enforcement_budget - budget_spent) / audit_cost))
-    )
-
-    audits_selected.extend(random_audits)
-
-    return audits_selected
-```
-
-### 5. Enforcement Effectiveness
-
-```python
-def calculate_enforcement_effectiveness(enforcement_capacity, violations, params):
-    # Detection rate
-    detected_violations = [v for v in violations if v.status == 'CONFIRMED']
-    actual_violations = violations  # In simulation, we know ground truth
-    detection_rate = len(detected_violations) / max(1, len(actual_violations))
-
-    # False positive rate
-    false_positives = [v for v in violations if v.status == 'DISMISSED']
-    false_positive_rate = len(false_positives) / max(1, len(violations))
-
-    # Deterrence effect (reduced cheating over time)
-    current_cheating_rate = calculate_cheating_rate(world_state)
-    baseline_cheating_rate = params['baseline_cheating_rate']
-    deterrence = max(0, baseline_cheating_rate - current_cheating_rate) / baseline_cheating_rate
-
-    # Cost efficiency
-    total_penalties_collected = sum([v.penalty_applied for v in detected_violations])
-    enforcement_cost = sum([c.budget for c in enforcement_capacity.values()])
-    cost_efficiency = total_penalties_collected / max(1, enforcement_cost)
-
-    # Composite effectiveness score
-    effectiveness = (
-        0.4 * detection_rate +
-        0.3 * deterrence +
-        0.2 * (1 - false_positive_rate) +
-        0.1 * min(1.0, cost_efficiency)
-    )
-
-    return {
-        'effectiveness': effectiveness,
-        'detection_rate': detection_rate,
-        'false_positive_rate': false_positive_rate,
-        'deterrence': deterrence,
-        'cost_efficiency': cost_efficiency
-    }
-```
-
-## Integration Points
-
-### Inputs From Other Modules
-
-1. **From Trade Flow Module**:
-   - Declared bilateral trade volumes and prices
-   - Actual vs declared routes
-   - Trade flow anomalies
-
-2. **From Energy & Logistics Module**:
-   - Unusual routing patterns
-   - Shadow fleet activity
-   - Infrastructure misuse signals
-
-3. **From Demand Module**:
-   - Demand spikes inconsistent with fundamentals
-   - Hoarding or stockpiling behavior
-
-4. **From Sanctions & Geopolitics Module**:
-   - Active sanctions to enforce
-   - Geopolitical risk scores
-   - Coalition enforcement priorities
-
-5. **From Country/Firm Agents**:
-   - Firm ownership structures
-   - State affiliation levels
-   - Strategic incentives to cheat
-
-### Outputs To Other Modules
-
-1. **To Trade Flow Module**:
-   - Blocked transactions
-   - Entities barred from trading
-   - Required route disclosures
-
-2. **To Pricing & Equilibrium Module**:
-   - Risk premiums for non-compliant countries
-   - Credit score impacts on borrowing costs
-   - Market access restrictions affecting supply
-
-3. **To Sanctions & Geopolitics Module**:
-   - Violation evidence for sanction justification
-   - Enforcement effectiveness metrics
-   - Coalition burden-sharing data
-
-4. **To Country Agents**:
-   - UTA credit scores and changes
-   - Audit notices and investigation status
-   - Remediation requirements
-
-5. **To Subsidy & Industrial Policy Module**:
-   - Detected hidden subsidies
-   - State aid violations
-   - Required transparency measures
-
-## Implementation Guidance
-
-### Algorithm Flow
-
-```python
-def update_compliance(world_state):
-    """Main compliance and detection cycle"""
-
-    # Step 1: Collect data for analysis
-    trade_data = world_state.trade_flows
-    mrio_tables = world_state.input_output_tables
-    firm_data = world_state.firm_registry
-    sanctions = world_state.active_sanctions
-
-    # Step 2: Run detection algorithms
-    anomalies = []
-
-    # Triangulation detection
-    anomalies.extend(detect_triangulation(
-        trade_data, mrio_tables,
-        world_state.detection_params
-    ))
-
-    # Transfer pricing detection
-    anomalies.extend(detect_transfer_pricing(
-        firm_data, world_state.benchmark_prices,
-        world_state.detection_params
-    ))
-
-    # MRIO consistency checks
-    anomalies.extend(check_mrio_consistency(
-        trade_data, mrio_tables,
-        world_state.detection_params
-    ))
-
-    # Partner report matching
-    anomalies.extend(check_partner_reports(
-        trade_data.exporter_reports,
-        trade_data.importer_reports,
-        world_state.detection_params
-    ))
-
-    # Step 3: Triage anomalies
-    flagged = triage_anomalies(
-        anomalies,
-        confidence_threshold=world_state.flag_threshold
-    )
-
-    # Step 4: Select audit targets
-    enforcement_budget = sum([
-        c.budget for c in world_state.enforcement_capacity.values()
-    ])
-
-    audit_targets = select_audit_targets(
-        entities=world_state.countries + world_state.firms,
-        enforcement_budget=enforcement_budget,
-        params=world_state.audit_params
-    )
-
-    # Step 5: Conduct audits
-    investigation_results = []
-    for target in audit_targets:
-        result = conduct_audit(
-            target, flagged, world_state.enforcement_capacity
-        )
-        investigation_results.append(result)
-
-    # Step 6: Update violation registry
-    for result in investigation_results:
-        if result.evidence_strength > world_state.confirmation_threshold:
-            violation = create_violation_record(result)
-            world_state.violations.append(violation)
-
-            # Apply penalty
-            penalty = calculate_penalty(violation, world_state.penalty_params)
-            apply_penalty(violation.violator, penalty, world_state)
-
-    # Step 7: Update UTA credits
-    for country in world_state.countries:
-        country_violations = [v for v in world_state.violations if v.violator == country]
-        country_compliance = get_compliance_actions(country)
-
-        new_credits = update_uta_credits(
-            country, country_violations, country_compliance,
-            world_state.credit_params
-        )
-
-    # Step 8: Calculate effectiveness metrics
-    effectiveness = calculate_enforcement_effectiveness(
-        world_state.enforcement_capacity,
-        world_state.violations,
-        world_state.effectiveness_params
-    )
-
-    # Step 9: Update baselines for future detection
-    update_baseline_patterns(trade_data, world_state.baseline_patterns)
-
-    return {
-        'flagged_anomalies': flagged,
-        'audits_conducted': audit_targets,
-        'violations_confirmed': [v for v in world_state.violations if v.status == 'CONFIRMED'],
-        'credit_changes': {c: c.uta_credits for c in world_state.countries},
-        'effectiveness': effectiveness
-    }
-```
-
-### Computational Considerations
-
-1. **Anomaly Detection Scaling**:
-   - Use statistical process control for real-time monitoring
-   - Pre-compute baseline statistics
-   - Parallelize detection across products/routes
-   - Use sliding windows for temporal patterns
-
-2. **Audit Optimization**:
-   - Dynamic programming for budget allocation
-   - Risk score caching
-   - Batch processing of similar cases
-
-3. **False Positive Management**:
-   - Bayesian updating of detection thresholds
-   - Machine learning for pattern recognition (future)
-   - Manual review queue for edge cases
-
-4. **Performance**:
-   - Index trade data by multiple dimensions
-   - Cache MRIO computations
-   - Incremental updates vs full recalculation
-
-## Calibration Requirements
-
-### Required Data Sources
-
-1. **Violation Data**:
-   - WTO trade dispute cases
-   - OFAC enforcement actions
-   - EU competition investigations
-   - Academic studies on trade fraud
-
-2. **Detection Benchmarks**:
-   - Customs fraud statistics
-   - Transfer pricing case studies
-   - Triangulation estimates (academic literature)
-   - MRIO validation studies
-
-3. **Penalty Data**:
-   - WTO sanction precedents
-   - National penalty schedules
-   - Credit rating impacts from violations
-
-4. **Cost Data**:
-   - Customs administration budgets
-   - Audit costs from enforcement agencies
-   - Technology investment in monitoring
-
-### Key Parameters to Calibrate
-
-```python
-COMPLIANCE_CALIBRATION = {
-    # Detection thresholds
-    'price_variance_threshold': 0.30,         # 30% deviation flags review
-    'volume_spike_threshold': 2.0,            # 2x normal volume
-    're_export_threshold': 0.80,              # 80% re-export ratio
-    'margin_threshold': 0.05,                 # 5% margin suspicious
-    'mrio_tolerance': 0.10,                   # 10% accounting discrepancy
-    'transfer_pricing_threshold': 0.25,       # 25% price deviation
-
-    # Violation penalties (UTA credit deductions)
-    'violation_penalty': {
-        'triangulation': 100,
-        'transfer_pricing': 75,
-        'origin_falsification': 50,
-        'subsidy_hiding': 80,
-        'sanction_evasion': 150
-    },
-
-    # Detection probabilities (base rates)
-    'detection_probability': {
-        'triangulation': 0.60,                # With moderate enforcement
-        'transfer_pricing': 0.40,
-        'origin_fraud': 0.70,
-        'subsidy_hiding': 0.30,
-        'sanction_evasion': 0.55
-    },
-
-    # Enforcement capacity
-    'cost_per_audit': 50000,                  # USD
-    'audits_per_investigator': 20,            # Per year
-    'random_audit_share': 0.15,               # 15% random selection
-
-    # UTA credit parameters
-    'credit_decay_rate': 0.98,                # 2% annual decay
-    'clean_audit_bonus': 10,
-    'disclosure_bonus': 20,
-    'credit_threshold_low': 300,              # Triggers restrictions
-    'credit_threshold_high': 700,             # Preferred partner status
-
-    # Effectiveness parameters
-    'baseline_cheating_rate': 0.15,           # 15% of firms/countries cheat
-    'audit_sensitivity': 1.5,                 # Risk multiplier for audit probability
-    'confirmation_threshold': 0.75            # Evidence strength to confirm
-}
-```
-
-### Validation Metrics
-
-1. **Detection Accuracy**: True positive rate > 70%, false positive rate < 20%
-2. **Deterrence Effect**: Cheating rate reduction of 40% vs no enforcement
-3. **Cost Efficiency**: Penalties collected > 2x enforcement costs
-4. **Credit Score Predictiveness**: Default/violation correlation R² > 0.6
-5. **Benchmark Comparison**: Detection rates match customs agency performance ±15%
+## The High-Stakes Game of Trade Compliance
+
+This module governs the cat-and-mouse game between countries trying to cheat the system and the UTA's enforcement mechanisms. Every country faces a fundamental choice: play by the rules and build reputation, or bend them for short-term gain while risking detection and punishment. Your decisions here can mean the difference between becoming a trusted trade partner with preferential access, or a pariah state facing escalating penalties and frozen out of lucrative markets.
+
+The enforcement system isn't just about catching cheaters—it's about creating a credible deterrent that makes compliance the rational choice. But enforcement has limits. Detection isn't perfect, audits are expensive, and clever cheaters can exploit gaps in monitoring. This creates a strategic tension: when is cheating worth the risk, and when should you invest in building legitimate competitive advantage?
+
+## Core Strategic Choices
+
+### The Compliance Dilemma
+
+Every turn, your country faces decisions about how to conduct trade:
+
+**Play It Straight**
+- Follow all rules, pay required tariffs, respect sanctions
+- Build UTA credits steadily (+10 credits per clean period)
+- Gain reputation as reliable partner
+- Qualify for preferential trading status at 700+ credits
+- Lower borrowing costs and insurance premiums
+- Access to exclusive trade agreements
+
+**Bend the Rules**
+- Save 10-40% on tariffs through creative accounting
+- Access sanctioned markets worth billions
+- Hide subsidies to boost competitiveness
+- Undercut competitors using transfer pricing
+- Risk detection (40-70% probability depending on method)
+- Face escalating penalties if caught
+
+**The Smart Cheat**
+- Target low-detection methods (30-40% risk)
+- Use complicit third countries as shields
+- Exploit enforcement blind spots
+- Mix legitimate and illegitimate trade
+- Maintain plausible deniability
+- Have exit strategies ready
+
+### Your UTA Credit Score: Reputation as Currency
+
+Your UTA credit score (starting at 500) is your reputation crystallized into a number. It affects everything:
+
+**High Credits (700+): Trusted Partner Status**
+- 5% discount on all trade insurance
+- Priority processing at customs
+- Access to exclusive trade clubs
+- Lower collateral requirements
+- Assumed innocent in investigations
+- Can sponsor other countries for credit
+
+**Medium Credits (400-700): Standard Access**
+- Normal trading conditions
+- Regular audit frequency
+- Standard investigation procedures
+- No special benefits or penalties
+
+**Low Credits (Below 400): High-Risk Classification**
+- 10-20% premium on trade financing
+- Enhanced monitoring and frequent audits
+- Guilty-until-proven-innocent investigations
+- Some markets may refuse to trade
+- Coalition partners distance themselves
+- May need guarantors for major deals
+
+**Credit Dynamics**
+- Credits decay 2% annually (use them or lose them)
+- Major violations: -50 to -150 credits
+- Clean audits: +10 credits
+- Voluntary disclosure of violations: +20 credits (and reduced penalties)
+- Coalition members share credit ratings (guilt by association)
+
+## Cheating Tactics: Risk vs Reward
+
+### 1. Triangulation (The Shell Game)
+**What It Is**: Re-routing sanctioned goods through complicit third countries to obscure their true origin.
+
+**When to Use**:
+- You're under sanctions but need to sell strategic goods
+- A third country owes you favors or shares your interests
+- The markup from triangulation (5-15%) is worth the risk
+
+**How It Works**:
+You (Country A) are sanctioned from selling oil to Country C. You sell to complicit Country B at a slight discount, who immediately re-exports to Country C with minimal markup. On paper, C bought from B. In reality, they bought your oil.
+
+**Risk Profile**:
+- Detection Probability: 60% (with standard enforcement)
+- Red Flags: High re-export ratios, minimal value-add, suspicious timing
+- Penalty if Caught: -100 credits, trade suspension, coalition condemnation
+
+**Counter-Detection Tactics**:
+- Use multiple intermediaries to obscure the trail
+- Add token processing to claim transformation
+- Spread shipments over time to avoid spikes
+- Ensure intermediary has plausible domestic demand
+
+### 2. Transfer Pricing Manipulation
+**What It Is**: Multinational firms manipulate internal prices between subsidiaries to shift profits and avoid tariffs.
+
+**When to Use**:
+- High tariff differentials between countries
+- You control firms with international subsidiaries
+- Tax havens are available for profit parking
+
+**How It Works**:
+Your steel company sells to its own subsidiary at artificially low prices, reducing the tariff base. The subsidiary then sells at market prices, booking the profit in a low-tax jurisdiction.
+
+**Risk Profile**:
+- Detection Probability: 40% (harder to prove intent)
+- Red Flags: Prices deviating 25%+ from market benchmarks
+- Penalty if Caught: -75 credits, back-taxes, public shaming
+
+**Counter-Detection Tactics**:
+- Stay within 20% of benchmark prices
+- Create paper trails of "business justification"
+- Use management fees and royalties instead of goods pricing
+- Rotate methods to avoid patterns
+
+### 3. Origin Falsification
+**What It Is**: Mislabeling products to claim preferential origin status or avoid restrictions.
+
+**When to Use**:
+- Minor processing can change tariff classification
+- Origin rules have exploitable loopholes
+- Document forging networks are available
+
+**How It Works**:
+Import 95% finished products, add a minor component, then claim "Made in [Your Country]" to access preferential tariffs.
+
+**Risk Profile**:
+- Detection Probability: 70% (physical inspections catch most)
+- Red Flags: Impossible production given your industrial capacity
+- Penalty if Caught: -50 credits, shipment seizure
+
+### 4. Subsidy Hiding
+**What It Is**: Concealing state support through complex corporate structures and indirect benefits.
+
+**When to Use**:
+- Your industries need support but you're under subsidy limits
+- WTO subsidy rules threaten your industrial policy
+- You can disguise subsidies as legitimate programs
+
+**How It Works**:
+Instead of direct subsidies, provide below-market loans through state banks, free land through "development zones," or purchase guarantees through state-owned enterprises.
+
+**Risk Profile**:
+- Detection Probability: 30% (very hard to prove)
+- Red Flags: Suspiciously profitable state enterprises, unusual financing terms
+- Penalty if Caught: -80 credits, countervailing duties, required transparency
+
+### 5. Sanctions Evasion Networks
+**What It Is**: Creating shadow fleets and shell companies to move sanctioned goods.
+
+**When to Use**:
+- You're comprehensively sanctioned but need hard currency
+- Black market premiums exceed 30%
+- You have access to flags of convenience
+
+**How It Works**:
+Register ships under obscure flags, turn off transponders in international waters, conduct ship-to-ship transfers, use cryptocurrency for payments.
+
+**Risk Profile**:
+- Detection Probability: 55% (satellite monitoring is improving)
+- Red Flags: AIS gaps, unusual port calls, opaque ownership
+- Penalty if Caught: -150 credits, asset freezing, criminal prosecution
+
+## The Enforcement System
+
+### Detection Mechanisms
+
+**1. Statistical Anomaly Detection**
+The system continuously monitors for patterns that don't make sense:
+- Why did your wheat exports spike 300% with no increase in production?
+- Why are you importing massive amounts of raw materials you don't use?
+- Why do your export prices differ drastically from world markets?
+
+*Strategic Insight*: Gradual changes are harder to detect than sudden spikes. Build your cheating operations slowly.
+
+**2. Multi-Regional Input-Output (MRIO) Validation**
+Every country's economy must balance: production = domestic use + exports - imports. The system checks if your reported trade matches your industrial capacity.
+- Can't export more steel than you produce + import
+- Can't show profits without corresponding economic activity
+- Shadow transactions eventually create impossible imbalances
+
+*Strategic Insight*: Small-scale cheating might hide in rounding errors, but large operations inevitably break the mathematical constraints.
+
+**3. Partner Report Reconciliation**
+Every trade has two sides. The system cross-checks:
+- Does what you claim to export match what others claim to import?
+- Do declared values align between partners?
+- Are shipping routes consistent with claimed transactions?
+
+*Strategic Insight*: Successful cheating requires coordinated lying. Solo operations are much riskier than conspiratorial ones.
+
+**4. Behavioral Pattern Analysis**
+The system learns your normal trade patterns and flags deviations:
+- Sudden new trading relationships with previously unknown partners
+- Trade flows that don't follow economic gravity (distance/size)
+- Seasonal patterns that suddenly break
+
+*Strategic Insight*: Establish "legitimate" patterns before exploiting them. A history of small trades makes large suspicious ones less noticeable.
+
+### Audit Selection: Who Gets Investigated?
+
+Not everyone can be audited—it's too expensive. The system uses risk-based targeting:
+
+**Risk Score Calculation** (0-1 scale):
+- Previous violations: 30% weight (once a cheater...)
+- Current anomaly flags: 30% weight (smoke often means fire)
+- Geopolitical tension: 20% weight (enemies get scrutinized)
+- Opacity score: 10% weight (transparency buys trust)
+- Strategic importance: 10% weight (critical goods get watched)
+
+**Audit Triggers**:
+- Risk score > 0.7: High probability of audit
+- Risk score 0.4-0.7: Moderate probability
+- Risk score < 0.4: Usually only random audits
+- 15% of all audits are random (keeping everyone honest)
+
+**Audit Costs**:
+- Standard audit: $50,000 and ties up bureaucrats
+- Deep forensic audit: $500,000 and may freeze assets
+- Coalition investigation: Shared costs but shared intelligence
+
+*Strategic Insight*: Keep your risk score low by maintaining some legitimate trade, avoiding repeated violations, and occasionally accepting an audit voluntarily (gains trust).
+
+### Investigation Process
+
+**Stage 1: Flagging** (Automated)
+- Anomaly detection algorithms run continuously
+- Flags raised for items exceeding thresholds
+- Initial risk assessment assigns priority
+
+**Stage 2: Preliminary Review** (1-2 turns)
+- Human analysts (or AI) review flagged transactions
+- Request additional documentation
+- Decision: Dismiss, Monitor, or Full Investigation
+
+**Stage 3: Formal Investigation** (2-4 turns)
+- Forensic accountants examine books
+- Physical inspections of facilities/shipments
+- Intelligence gathering from partners
+- Interviews with officials and executives
+
+**Stage 4: Determination**
+- Evidence strength must exceed 75% for conviction
+- Penalties applied based on severity and history
+- Appeals process available (costs credits and time)
+
+### Penalties and Consequences
+
+**Penalty Escalation** (for repeat offenders):
+- First offense: Warning + credit penalty
+- Second offense: 2x credit penalty + trade restrictions
+- Third offense: 3x penalty + market access suspension
+- Fourth offense: Pariah state status, comprehensive sanctions
+
+**Immediate Penalties by Violation Type**:
+
+*Triangulation*: -100 credits
+- Implicated intermediaries also penalized (-50 credits)
+- Trade routes exposed and blocked
+- May trigger coalition enforcement
+
+*Transfer Pricing*: -75 credits
+- Back-taxes assessed at 2x avoided amount
+- Firm placed under monitoring for 10 turns
+- Must use approved pricing for 5 turns
+
+*Origin Fraud*: -50 credits
+- Shipments seized and destroyed
+- Certificate privileges revoked
+- Enhanced inspection for all future trades
+
+*Subsidy Hiding*: -80 credits
+- Countervailing duties imposed retroactively
+- Industrial policy transparency required
+- WTO dispute likely
+
+*Sanctions Evasion*: -150 credits
+- Assets frozen globally
+- Firms blacklisted from international markets
+- Criminal prosecution of executives
+- Coalition military response possible
+
+## Strategic Enforcement Investment
+
+Countries can invest in enforcement capacity—either their own or the UTA's:
+
+### National Enforcement (Protecting Yourself)
+**Benefits**:
+- Detect others cheating against you faster
+- Build cases for UTA complaints
+- Protect domestic markets
+- Gain intelligence on competitors
+
+**Costs**:
+- $1M per enforcement unit per turn
+- Requires skilled personnel (opportunity cost)
+- May provoke retaliation
+
+**Effectiveness**:
+- Each unit provides +5% detection probability for trades involving you
+- Stacks with UTA enforcement
+- Can share intelligence with allies
+
+### UTA Contribution (Collective Enforcement)
+**Benefits**:
+- Strengthens global system
+- Gains influence in UTA governance
+- Earns credits (+1 per $10M contributed)
+- Better enforcement helps everyone
+
+**Strategic Considerations**:
+- Free-rider problem: Why pay when others might?
+- But weak enforcement hurts legitimate traders most
+- Coalition contributions can be coordinated
+
+## Coalition Enforcement Dynamics
+
+### Shared Intelligence
+Coalition members automatically share detection data:
+- Violation by one member costs all members -10 credits
+- But detection by one member credits all members +5 credits
+- Creates internal pressure for compliance
+- Also enables coordinated cheating if all agree
+
+### Joint Investigations
+Coalitions can pool resources for investigations:
+- Shared costs (divided equally)
+- Combined intelligence increases detection +20%
+- Unified penalties carry more weight
+- But requires consensus (veto possible)
+
+### Trust Networks
+High-credit countries (700+) can vouch for others:
+- Sponsor gains +10 credits if sponsored stays clean
+- But loses -30 credits if sponsored cheats
+- Creates mentorship dynamics
+- Can rehabilitate former violators
+
+## Reading the Enforcement Landscape
+
+### Key Indicators to Monitor
+
+**Global Enforcement Strength**:
+- Total enforcement budget (sum of all contributions)
+- Detection rates (what percentage getting caught)
+- Average credit scores (system health)
+- False positive rates (system accuracy)
+
+**Your Risk Exposure**:
+- Current risk score (probability of audit)
+- Outstanding anomaly flags
+- Coalition members' behavior
+- Enforcement capacity of trade partners
+
+**Opportunity Windows**:
+- Overwhelmed enforcement (too many cases)
+- Geopolitical distractions (crises elsewhere)
+- New detection blind spots (novel methods)
+- Coalition breakdown (reduced coordination)
+
+### Information Warfare
+
+**Hiding in Noise**:
+- Time cheating during global crises when enforcement is distracted
+- Create false positives to overwhelm the system
+- Coordinate with others to normalize suspicious behavior
+
+**Building Cover**:
+- Establish legitimate business reasons for unusual patterns
+- Create complex corporate structures for plausible deniability
+- Maintain charitable activities for reputation washing
+
+**Counter-Intelligence**:
+- Feed false information to competitors
+- Trigger investigations of rivals through anonymous tips
+- Publicize others' violations to distract from your own
+
+## Example Scenarios
+
+### Scenario 1: The Calculated Risk
+You're a mid-sized economy (Credit Score: 520) facing economic pressure. A 25% tariff makes your steel exports uncompetitive. Analysis:
+- Transfer pricing could save $50M annually (25% of tariff burden)
+- 40% detection chance risks -75 credits and back-taxes
+- Expected value: $50M × 0.6 - ($50M × 2 + credit penalty value) × 0.4
+- **Decision**: If credit value < $30M, cheating has positive expected value
+
+### Scenario 2: The Sanctions Squeeze
+You're comprehensively sanctioned but sitting on valuable oil reserves. Options:
+- Legitimate: Accept economic isolation, GDP drops 30%
+- Shadow fleet: 55% detection risk but black market pays 40% premium
+- Triangulation: 60% detection risk but maintains some legitimacy
+- **Decision**: Shadow fleet if you can afford pariah status, triangulation if you need to maintain some international standing
+
+### Scenario 3: The Clean Player Advantage
+You've maintained 750+ credits for 10 turns. Benefits compound:
+- 5% discount on trade finance saves $100M annually
+- Preferential market access worth $200M in additional exports
+- Can sponsor two developing nations for +20 credits each
+- Low audit risk means minimal compliance costs
+- **Decision**: One violation would cost 5+ turns of benefits. Stay clean unless facing existential threat.
+
+### Scenario 4: The Rehabilitation Path
+You're at 350 credits after multiple violations. Recovery strategy:
+- Voluntary disclosure of minor past violation: +20 credits, -10 penalty = +10 net
+- Accept enhanced monitoring for 5 turns: +50 credits if clean
+- Contribute $50M to UTA enforcement: +5 credits
+- Find high-credit sponsor: Faster rehabilitation but dependency
+- **Decision**: Full rehabilitation takes 10-15 turns. Weigh against benefits of continued cheating.
+
+## Calibration and Balance
+
+### Detection Probabilities (Base Rates)
+- Triangulation: 60% (requires coordinated deception)
+- Origin Falsification: 70% (physical evidence hard to hide)
+- Sanctions Evasion: 55% (shadow networks sophisticated)
+- Transfer Pricing: 40% (intent hard to prove)
+- Subsidy Hiding: 30% (many legitimate programs)
+
+### Enforcement Economics
+- Cost per audit: $50,000
+- Audits per investigator per year: 20
+- Random audit share: 15% (unpredictability factor)
+- Break-even enforcement: Penalties = 2x enforcement costs
+- Optimal deterrence: 40% reduction in cheating vs no enforcement
+
+### Credit System Parameters
+- Starting credits: 500
+- Annual decay: 2% (encourages active compliance)
+- Violation penalties: -50 to -150 based on severity
+- Clean audit bonus: +10 credits
+- Voluntary disclosure: +20 credits
+- Low threshold (restrictions): 300 credits
+- High threshold (preferred status): 700 credits
+
+### Systemic Balance Targets
+- Equilibrium cheating rate: 10-15% of countries/firms
+- Detection accuracy: 70% true positives, <20% false positives
+- Credit score predictiveness: 60% correlation with future violations
+- Enforcement cost efficiency: 2:1 penalty-to-cost ratio
+- Deterrence effectiveness: 40-50% reduction in violations
+
+## Strategic Recommendations
+
+### For Aggressive Players
+- Master one cheating method deeply rather than many poorly
+- Build networks of complicit partners before you need them
+- Time violations during global distractions
+- Maintain minimum viable credit (400) rather than zero
+- Have exit strategies and alternative markets ready
+
+### For Conservative Players
+- Invest in legitimate competitive advantages
+- Bank credits during good times for crisis flexibility
+- Use high credit status to shape rules in your favor
+- Sponsor others to build obligation networks
+- Position as regional compliance hub
+
+### For Balanced Players
+- Maintain dual-track capabilities (clean and dirty)
+- Keep credits in middle range (500-600) for flexibility
+- Use minor violations to test enforcement weaknesses
+- Build reputation in some markets while cheating in others
+- Participate in enforcement to gain intelligence
+
+## Conclusion: The Metagame
+
+The Compliance & Cheating Detection Module isn't just about following or breaking rules—it's about understanding when rules serve your interests and when they constrain them. The most successful players will be those who can navigate this gray area, building trust when it pays and breaking it when necessary, all while managing the complex risk-reward calculations that separate strategic cheating from reckless violation.
+
+Remember: In this system, reputation is a currency, enforcement is imperfect, and today's enforcer might be tomorrow's violator. The key is not to be purely honest or purely deceptive, but to be strategically flexible, reading the enforcement landscape and adapting your compliance strategy to maximize long-term advantage.
+
+Your credit score tells a story. What story will yours tell?

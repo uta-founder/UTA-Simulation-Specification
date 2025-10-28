@@ -1,512 +1,476 @@
 # Sanctions & Geopolitics Module
 
-## Purpose & Scope
-
-The Sanctions & Geopolitics Module models the strategic layer of international economic relations, including trade restrictions, alliance dynamics, retaliatory measures, and geopolitical constraints. It captures how countries use economic tools for political objectives, form coalitions, and navigate the tension between economic interdependence and strategic autonomy. The module generates policy decisions based on game-theoretic reasoning and tracks reputation, credibility, and escalation dynamics.
-
-This module bridges economic simulation with strategic behavior, ensuring that trade policies reflect not just economic optimization but also security concerns, alliance obligations, and power projection. It models both unilateral actions (sanctions, tariffs) and multilateral coordination (trade blocs, collective sanctions).
-
-## Key Components
-
-### 1. Sanctions Engine
-- **Sanction Types**: Sectoral, entity-specific, financial, technology transfer
-- **Implementation Mechanisms**: Full embargo, partial restrictions, licensing requirements
-- **Enforcement Levels**: Strict, moderate, symbolic
-- **Secondary Sanctions**: Pressure on third parties
-
-### 2. Alliance & Bloc Management
-- **Coalition Formation**: Economic blocs, security alliances, sanctions coalitions
-- **Burden Sharing**: Cost distribution among allies
-- **Free Riding Detection**: Monitoring compliance within coalitions
-- **Preference Alignment**: Measuring policy convergence
-
-### 3. Retaliation Framework
-- **Tit-for-Tat Logic**: Proportional response mechanisms
-- **Escalation Ladders**: Graduated response options
-- **De-escalation Pathways**: Face-saving exits and negotiations
-- **Asymmetric Responses**: Non-reciprocal countermeasures
-
-### 4. Geopolitical Constraints
-- **Red Lines**: Non-negotiable security interests
-- **Sphere of Influence**: Regional hegemony dynamics
-- **Strategic Dependencies**: Critical supply vulnerabilities
-- **Reputation Management**: Credibility and deterrence
-
-## Data Structures
-
-### Input Data
-```python
-class GeopoliticsInputs:
-    # Bilateral Relations
-    diplomatic_distance: dict[country_i][country_j] -> float  # 0=allied, 1=hostile
-    security_alliances: list[set[countries]]                  # NATO, CSTO, etc.
-    economic_blocs: list[set[countries]]                      # EU, ASEAN, etc.
-    historical_conflicts: dict[(country_i, country_j)] -> list[dispute]
-
-    # Strategic Interests
-    red_lines: dict[country] -> list[issue]                   # Non-negotiable positions
-    strategic_resources: dict[country][product] -> float      # Dependency level
-    military_capability: dict[country] -> float               # Power projection
-
-    # Economic Leverage
-    trade_dependence: dict[country_i][country_j] -> float     # Trade/GDP ratio
-    financial_exposure: dict[country_i][country_j] -> float   # Investment stocks
-    technology_dependence: dict[country][tech_provider] -> float
-
-    # From Economic Modules
-    trade_flows: dict[exporter][importer][product] -> float
-    market_share: dict[country][market][product] -> float
-    gdp: dict[country] -> float
-```
-
-### Internal State
-```python
-class GeopoliticsState:
-    # Active Sanctions
-    sanctions_registry: list[Sanction]  where Sanction = {
-        'sender': country,
-        'target': country,
-        'type': enum[SECTORAL, FINANCIAL, TECHNOLOGY, COMPREHENSIVE],
-        'scope': list[products/sectors],
-        'severity': float,  # 0-1
-        'start_date': int,
-        'effectiveness': float,  # Actual impact vs intended
-        'coalition': set[countries]  # Supporting countries
-    }
-
-    # Alliance Dynamics
-    bloc_cohesion: dict[bloc] -> float  # 0-1, unity level
-    alliance_commitments: dict[country][alliance] -> float  # Commitment strength
-
-    # Reputation & Credibility
-    reputation_score: dict[country] -> float  # Reliability as partner
-    deterrence_credibility: dict[country] -> float  # Threat credibility
-    sanction_effectiveness_history: dict[country] -> list[float]
-
-    # Escalation Tracking
-    tension_matrix: dict[country_i][country_j] -> float  # Current tension level
-    escalation_stage: dict[(country_i, country_j)] -> int  # Ladder position
-    recent_actions: list[GeopoliticalAction]  # For retaliation calculation
-
-    # Strategic Positioning
-    influence_score: dict[country][region] -> float
-    alignment_matrix: dict[country_i][country_j] -> float  # Policy similarity
-```
-
-### Output Data
-```python
-class GeopoliticsOutputs:
-    # Policy Decisions
-    new_sanctions: list[Sanction]
-    lifted_sanctions: list[Sanction]
-    tariff_changes: dict[country][partner][product] -> float
-    trade_agreements: list[Agreement]
-
-    # Strategic Signals
-    escalation_risk: dict[(country_i, country_j)] -> float
-    coalition_stability: dict[bloc] -> float
-    retaliation_probability: dict[country][action] -> float
-
-    # Economic Impacts
-    sanction_costs: dict[sender] -> float  # Cost to sender
-    sanction_damage: dict[target] -> float  # Damage to target
-    third_party_effects: dict[country] -> float  # Collateral damage
-
-    # For Other Modules
-    trade_restrictions: dict[importer][exporter][product] -> bool
-    tariff_schedule: dict[importer][exporter][product] -> float
-    risk_premiums: dict[country] -> float  # Political risk markup
-```
-
-## Economic Logic
-
-### 1. Sanction Decision Calculus
-
-**Expected Utility Framework**:
-```python
-def evaluate_sanction_decision(sender, target, sanction_type, params):
-    # Benefits
-    political_gain = calculate_political_value(
-        sender.objectives,
-        target.behavior_change_probability,
-        sender.domestic_support
-    )
-
-    # Costs
-    economic_cost = calculate_economic_damage(
-        sender.trade_exposure[target],
-        sanction_type.trade_impact,
-        sender.substitution_capacity
-    )
-
-    reputation_cost = calculate_reputation_impact(
-        sanction_type.legitimacy,
-        international_support,
-        sender.past_sanctions
-    )
-
-    # Probability of success
-    success_probability = estimate_success_rate(
-        sender.economic_leverage[target],
-        target.resilience,
-        coalition_size,
-        sanction_type.severity
-    )
-
-    expected_utility = (political_gain * success_probability -
-                       economic_cost - reputation_cost)
-
-    return expected_utility > sender.sanction_threshold
-```
-
-### 2. Coalition Formation Game
-
-**Coalition Stability Condition (Core)**:
-```
-V(C) ≥ Σ[i∈C] V({i})  # Coalition value exceeds sum of individual values
-
-Where:
-- V(C) = Total value of coalition C
-- V({i}) = Value country i can achieve alone
-
-Shapley Value allocation:
-φ[i] = Σ[S⊆N\{i}] [|S|!(|N|-|S|-1)!/|N|!] * [V(S∪{i}) - V(S)]
-```
-
-### 3. Retaliation Game Theory
-
-**Tit-for-Tat with Forgiveness**:
-```python
-def determine_retaliation(action_against_us, our_strategy, history):
-    if our_strategy == 'tit_for_tat':
-        # Match opponent's action
-        retaliation_level = action_against_us.severity
-
-        # Add noise/forgiveness to prevent spirals
-        if random.random() < params['forgiveness_probability']:
-            retaliation_level *= params['de_escalation_factor']
-
-    elif our_strategy == 'massive_retaliation':
-        # Disproportionate response for deterrence
-        retaliation_level = min(
-            action_against_us.severity * params['escalation_multiplier'],
-            our_maximum_damage_capability
-        )
-
-    elif our_strategy == 'graduated_response':
-        # Incremental escalation
-        previous_level = history.get_last_retaliation_level()
-        retaliation_level = previous_level + params['escalation_step']
-
-    return select_retaliation_action(retaliation_level)
-```
-
-### 4. Alliance Burden Sharing
-
-**Olson-Zeckhauser Model**:
-```python
-def calculate_burden_sharing(alliance, threat_level):
-    total_contribution = 0
-    contributions = {}
-
-    for member in alliance.members:
-        # Larger members contribute disproportionately
-        optimal_contribution = (member.gdp / alliance.total_gdp) ** params['power_factor']
-
-        # Adjust for free-riding incentive
-        free_riding_factor = 1 - params['free_riding_rate'] * (1 - member.vulnerability)
-
-        contributions[member] = optimal_contribution * free_riding_factor * threat_level
-        total_contribution += contributions[member]
-
-    # Check if alliance holds
-    alliance_stability = total_contribution >= alliance.minimum_deterrence
-
-    return contributions, alliance_stability
-```
-
-### 5. Reputation Dynamics
-
-**Reputation Update Function**:
-```python
-def update_reputation(country, action, outcome):
-    # Base reputation decay
-    country.reputation *= params['reputation_decay']
-
-    # Action-based update
-    if action.type == 'impose_sanction':
-        if outcome == 'success':
-            country.reputation += params['successful_enforcement_bonus']
-            country.deterrence_credibility += params['credibility_gain']
-        else:
-            country.reputation -= params['failed_enforcement_penalty']
-            country.deterrence_credibility -= params['credibility_loss']
-
-    elif action.type == 'violate_agreement':
-        country.reputation -= params['violation_penalty']
-        country.trustworthiness *= params['trust_damage_multiplier']
-
-    elif action.type == 'honor_commitment':
-        country.reputation += params['reliability_bonus']
-
-    # Bound reputation
-    country.reputation = max(0, min(1, country.reputation))
-```
-
-### 6. Strategic Resource Dependencies
-
-**Vulnerability Assessment**:
-```python
-def assess_strategic_vulnerability(country, product):
-    # Import dependence
-    import_share = imports[country][product] / total_consumption[country][product]
-
-    # Concentration risk
-    herfindahl_index = sum([
-        (imports_from[supplier] / total_imports) ** 2
-        for supplier in suppliers
-    ])
-
-    # Substitutability
-    substitution_difficulty = 1 / product.elasticity_of_substitution
-
-    # Strategic importance
-    criticality = product.strategic_importance * product.defense_relevance
-
-    vulnerability_score = (import_share * herfindahl_index *
-                          substitution_difficulty * criticality)
-
-    return vulnerability_score
-```
-
-## Integration Points
-
-### Inputs From Other Modules
-
-1. **From Trade Flow Module**:
-   - Current bilateral trade volumes
-   - Trade route dependencies
-   - Alternative suppliers availability
-
-2. **From Country Agents**:
-   - National objectives and priorities
-   - Risk tolerance parameters
-   - Domestic political constraints
-
-3. **From Pricing & Equilibrium Module**:
-   - Economic impact of trade restrictions
-   - Market share changes from sanctions
-   - Price effects of supply disruptions
-
-4. **From Energy & Logistics Module**:
-   - Critical infrastructure vulnerabilities
-   - Energy supply dependencies
-   - Transportation chokepoints
-
-5. **From Compliance Module**:
-   - Sanction violation detection
-   - Circumvention evidence
-   - Enforcement effectiveness
-
-### Outputs To Other Modules
-
-1. **To Trade Flow Module**:
-   - Prohibited trade flows (sanctions)
-   - Tariff rates by country-pair-product
-   - Quota restrictions
-
-2. **To Country Agents**:
-   - Available policy actions
-   - Reputation scores
-   - Alliance obligations
-
-3. **To Pricing & Equilibrium Module**:
-   - Supply shocks from sanctions
-   - Risk premiums for political instability
-   - Trade policy uncertainty effects
-
-4. **To Compliance & Detection Module**:
-   - Sanctions to monitor
-   - Coalition enforcement priorities
-   - Legitimacy scores for enforcement
-
-## Implementation Guidance
-
-### Algorithm Flow
-
-```python
-def update_geopolitics(world_state):
-    """Main geopolitical dynamics update"""
-
-    # Step 1: Assess current situation
-    for country in world_state.countries:
-        country.threat_assessment = evaluate_threats(
-            country,
-            world_state.tension_matrix,
-            world_state.recent_actions
-        )
-
-        country.opportunity_assessment = identify_opportunities(
-            country,
-            world_state.alliance_dynamics,
-            world_state.economic_leverage
-        )
-
-    # Step 2: Generate policy options
-    policy_options = {}
-    for country in world_state.countries:
-        options = []
-
-        # Sanction decisions
-        if country.threat_assessment.requires_response:
-            options.extend(generate_sanction_options(
-                country,
-                country.threat_assessment.source,
-                world_state.coalition_possibilities
-            ))
-
-        # Alliance decisions
-        if country.opportunity_assessment.alliance_beneficial:
-            options.extend(generate_alliance_options(
-                country,
-                world_state.potential_partners
-            ))
-
-        # Retaliation decisions
-        if country in world_state.recent_targets:
-            options.extend(generate_retaliation_options(
-                country,
-                world_state.recent_actions_against[country]
-            ))
-
-        policy_options[country] = options
-
-    # Step 3: Strategic decision making
-    decisions = {}
-    for country in world_state.countries:
-        # Game-theoretic evaluation
-        best_response = find_nash_equilibrium(
-            country,
-            policy_options[country],
-            expected_responses(world_state.countries, country)
-        )
-
-        decisions[country] = best_response
-
-    # Step 4: Implement decisions
-    for country, decision in decisions.items():
-        if decision.type == 'impose_sanction':
-            implement_sanction(decision, world_state)
-        elif decision.type == 'form_alliance':
-            form_alliance(decision, world_state)
-        elif decision.type == 'retaliate':
-            execute_retaliation(decision, world_state)
-
-    # Step 5: Update reputation and relationships
-    update_reputation_scores(world_state, decisions)
-    update_bilateral_relations(world_state, decisions)
-    update_tension_matrix(world_state)
-
-    # Step 6: Check for escalation/de-escalation
-    manage_escalation_dynamics(world_state)
-
-    return world_state.geopolitics_state
-```
-
-### Computational Considerations
-
-1. **Game Theory Solvers**:
-   - Use backward induction for sequential games
-   - Implement iterative best response for simultaneous games
-   - Cache equilibrium solutions for common scenarios
-
-2. **Coalition Formation**:
-   - Use cooperative game theory algorithms
-   - Implement Shapley value for fair allocation
-   - Check core conditions for stability
-
-3. **Belief Updates**:
-   - Bayesian updating for reputation
-   - Kalman filters for continuous variables
-   - Decay functions for historical memory
-
-4. **Scenario Generation**:
-   - Monte Carlo for uncertainty
-   - Minimax for worst-case planning
-   - Robust optimization for strategic decisions
-
-## Calibration Requirements
-
-### Required Data Sources
-
-1. **Diplomatic Relations**:
-   - UN voting similarity indices
-   - Alliance membership data (NATO, CSTO, etc.)
-   - Bilateral trade agreements database
-   - Historical conflict data (GDELT, ICEWS)
-
-2. **Sanctions Data**:
-   - Global Sanctions Database (GSDB)
-   - US Treasury OFAC sanctions
-   - EU consolidated sanctions list
-   - UN Security Council sanctions
-
-3. **Economic Interdependence**:
-   - Bilateral trade from UN Comtrade
-   - FDI stocks from UNCTAD
-   - Technology trade from OECD
-
-4. **Strategic Resources**:
-   - Critical minerals assessments
-   - Energy trade from IEA
-   - Food security from FAO
-   - Defense industrial base reports
-
-### Key Parameters to Calibrate
-
-```python
-GEOPOLITICS_CALIBRATION = {
-    # Sanction Effectiveness
-    'sanction_success_rate': {
-        'comprehensive': 0.35,         # Full embargo success rate
-        'targeted': 0.25,              # Smart sanctions success
-        'sectoral': 0.30,              # Sector-specific success
-        'symbolic': 0.10               # Minimal actual impact
-    },
-
-    # Coalition Parameters
-    'coalition_bonus': 1.5,            # Effectiveness multiplier
-    'free_riding_rate': 0.3,          # Typical free-riding level
-    'coalition_fragmentation': 0.2,    # Probability of defection
-
-    # Retaliation Parameters
-    'retaliation_probability': 0.7,    # Base retaliation chance
-    'escalation_ladder_steps': 5,      # Levels before war
-    'de_escalation_probability': 0.3,  # Chance to step back
-    'tit_for_tat_noise': 0.1,         # Forgiveness factor
-
-    # Reputation Dynamics
-    'reputation_decay': 0.95,          # Per period decay
-    'credibility_half_life': 10,       # Periods to halve
-    'violation_penalty': 0.3,          # Reputation loss
-    'compliance_bonus': 0.1,           # Reputation gain
-
-    # Strategic Thresholds
-    'red_line_sensitivity': 0.9,       # Trigger probability
-    'vulnerability_threshold': 0.6,     # When to diversify
-    'alliance_threshold': 0.4,         # Minimum benefit to join
-
-    # Economic Costs
-    'sanction_deadweight_loss': 0.15,  # Economic efficiency loss
-    'trade_diversion_cost': 0.25,      # Cost of new suppliers
-    'reputation_economic_value': 0.05   # GDP impact of reputation
-}
-```
-
-### Validation Metrics
-
-1. **Sanction Prediction**: F1 score > 0.7 on historical sanctions
-2. **Alliance Stability**: Predict alliance duration within 20%
-3. **Escalation Dynamics**: Match historical escalation patterns
-4. **Retaliation Timing**: Correct prediction rate > 65%
-5. **Economic Impact**: Sanction costs within 30% of empirical estimates
+## What This Module Does
+
+The Sanctions & Geopolitics Module transforms the UTA simulation from pure economic competition into a strategic game of power, influence, and economic warfare. Countries don't just trade—they wield economic tools as weapons, form alliances for protection and leverage, and navigate the dangerous waters between cooperation and conflict.
+
+Think of this as the "diplomacy and conflict" layer of the game. While other modules handle production, trade, and market dynamics, this module governs how countries use those economic relationships strategically. Can you strangle an adversary's economy with sanctions? Will your allies back you up, or will they prioritize their own economic interests? How far can you push before triggering dangerous retaliation?
+
+## Core Gameplay Mechanics
+
+### The Strategic Toolkit
+
+Countries in the UTA simulation have powerful geopolitical tools at their disposal:
+
+**Economic Warfare Options**:
+- **Sanctions**: Block specific products, sectors, or all trade with target countries
+- **Secondary Sanctions**: Force third parties to choose between trading with you or your target
+- **Financial Restrictions**: Freeze assets, block payments, restrict currency access
+- **Technology Embargos**: Prevent access to critical technologies and know-how
+
+**Alliance & Coalition Building**:
+- **Trade Blocs**: Form preferential trading zones with reduced barriers
+- **Sanctions Coalitions**: Coordinate economic pressure for greater impact
+- **Security Alliances**: Mutual defense that affects economic decisions
+- **Burden Sharing**: Distribute the costs of economic warfare among allies
+
+**Strategic Responses**:
+- **Retaliation**: Counter-sanctions and asymmetric responses
+- **Circumvention**: Find alternative routes and suppliers
+- **Escalation Control**: Carefully calibrated responses to avoid spiraling conflicts
+- **De-escalation**: Face-saving exits and negotiated settlements
+
+### How Sanctions Work in the Game
+
+When you impose sanctions, you're essentially telling the trade system: "Block these specific flows." But it's not that simple. Every sanction creates ripples:
+
+**The Sanction Decision Tree**:
+1. **Choose Your Target**: Which country threatens your interests?
+2. **Select Sanction Type**:
+   - Comprehensive (35% success rate): Total trade embargo
+   - Sectoral (30% success rate): Target specific industries
+   - Targeted (25% success rate): "Smart" sanctions on entities
+   - Symbolic (10% success rate): Political signaling with minimal impact
+
+3. **Build a Coalition** (optional but powerful):
+   - Coalition sanctions are 50% more effective
+   - Costs are shared among participants
+   - But maintaining unity is challenging (20% fragmentation risk)
+
+4. **Calculate the Trade-offs**:
+   - **Political Gain**: Will this achieve your objectives?
+   - **Economic Cost**: How much will YOU suffer from lost trade?
+   - **Reputation Impact**: Will others see you as reliable or aggressive?
+
+**Example Scenario**:
+The US sanctions China's semiconductor sector. US loses access to Chinese rare earths (economic cost), but potentially slows China's tech advancement (political gain). If the EU joins, effectiveness increases by 50%, but if Japan defects for economic reasons, the coalition weakens.
+
+### Alliance Dynamics
+
+Alliances aren't just political badges—they fundamentally alter your economic options and obligations.
+
+**How Alliances Function**:
+
+1. **Preferential Trading**:
+   - Members reduce tariffs and barriers within the bloc
+   - Shared standards and regulations reduce transaction costs
+   - But you may need to discriminate against efficient non-members
+
+2. **Collective Security Economics**:
+   - An attack on one affects all members' trade policies
+   - Larger members contribute disproportionally (Olson-Zeckhauser effect)
+   - Free-riding temptation: Let others bear the costs while you benefit
+
+3. **Policy Coordination**:
+   - Synchronized sanctions for maximum impact
+   - Shared intelligence on circumvention attempts
+   - But requires compromising on national preferences
+
+**Alliance Stability Mechanics**:
+
+The game tracks "bloc cohesion" (0-1 scale). High cohesion means coordinated action and shared costs. Low cohesion leads to:
+- Members pursuing side deals
+- Unequal burden sharing
+- Potential bloc dissolution
+
+Your actions affect cohesion:
+- Honoring commitments: +10% cohesion
+- Violating agreements: -30% cohesion
+- Free-riding detected: -20% cohesion
+
+### The Retaliation Game
+
+Retaliation is where game theory meets economic warfare. Every aggressive action invites a response, but how countries respond depends on their strategy:
+
+**Retaliation Strategies**:
+
+1. **Tit-for-Tat** (70% base probability):
+   - Match opponent's action severity
+   - Built-in 10% "forgiveness" to prevent endless spirals
+   - Predictable but stable
+
+2. **Massive Retaliation**:
+   - Disproportionate response for deterrence
+   - Escalation multiplier based on capability
+   - High risk of triggering escalation ladder
+
+3. **Graduated Response**:
+   - Incremental escalation with clear steps
+   - Allows for negotiation between rounds
+   - Each step increases pressure by defined amount
+
+**The Escalation Ladder** (5 steps to conflict):
+1. Diplomatic protests and symbolic sanctions
+2. Targeted economic measures
+3. Broad sectoral sanctions
+4. Comprehensive economic warfare
+5. Military posturing or action threats
+
+Each step up reduces de-escalation probability by 10%. At step 5, you're one miscalculation from kinetic conflict.
+
+### Reputation & Credibility System
+
+Your reputation isn't just a score—it's currency in the geopolitical game.
+
+**How Reputation Works**:
+
+Starting reputation: 0.5 (neutral)
+- Decays 5% per turn (memory fades)
+- Maximum reputation: 1.0 (completely trustworthy)
+- Minimum reputation: 0.0 (pariah state)
+
+**Actions That Build Reputation**:
+- Successfully enforcing sanctions: +0.15 credibility
+- Honoring alliance commitments: +0.10 reliability
+- De-escalating conflicts: +0.05 stability
+- Fair burden sharing: +0.08 cooperation
+
+**Actions That Damage Reputation**:
+- Failed sanctions: -0.20 credibility
+- Violating agreements: -0.30 trustworthiness
+- Aggressive first strikes: -0.25 stability
+- Free-riding in alliances: -0.15 cooperation
+
+**Why Reputation Matters**:
+- High reputation (>0.7):
+  - Others more likely to join your coalitions
+  - Better terms in negotiations
+  - Reduced risk premiums on trade (5% GDP benefit)
+
+- Low reputation (<0.3):
+  - Difficulty forming alliances
+  - Preemptive defensive measures by others
+  - Economic isolation effects (-5% to -10% GDP)
+
+### Strategic Resource Dependencies
+
+Some products aren't just commodities—they're strategic weapons. The game tracks vulnerability scores for critical dependencies.
+
+**Vulnerability Calculation**:
+
+Your vulnerability to supply cutoffs depends on:
+1. **Import Share**: How much you rely on imports vs. domestic production
+2. **Supplier Concentration**: Few suppliers = higher risk (measured by Herfindahl Index)
+3. **Substitution Difficulty**: Can you switch to alternatives? (inverse of elasticity)
+4. **Strategic Importance**: Military, energy, food security multipliers
+
+**Example**:
+Germany's natural gas vulnerability to Russia:
+- Import share: 40% of consumption
+- Supplier concentration: 0.64 (high)
+- Substitution difficulty: High (low elasticity = 1.3)
+- Strategic importance: Critical (winter heating + industry)
+- **Vulnerability Score: 0.83** (extreme vulnerability)
+
+This affects your strategic options—high vulnerability means you'll think twice before sanctioning that supplier.
+
+## Economic Impacts & Feedback Loops
+
+### Sanction Effectiveness Economics
+
+Sanctions rarely work as intended. The game models realistic effectiveness:
+
+**Success Rates by Type**:
+- Comprehensive embargo: 35% (high impact but often circumvented)
+- Sectoral sanctions: 30% (focused but substitutable)
+- Smart sanctions: 25% (precise but limited impact)
+- Symbolic sanctions: 10% (political theater)
+
+**What Determines Success**:
+1. **Economic Leverage** = (Your GDP / Target GDP) × Trade Dependence
+2. **Coalition Size** = Percentage of target's trade partners participating
+3. **Target Resilience** = Domestic production capacity + Alternative suppliers
+4. **Enforcement Quality** = Detection capability × Political will
+
+### Cost-Benefit Calculations
+
+Every geopolitical action has economic consequences:
+
+**Imposing Sanctions Costs YOU**:
+- Direct trade loss: Value of foregone exports/imports
+- Deadweight loss: 15% efficiency loss from trade diversion
+- Administrative costs: Monitoring and enforcement
+- Retaliation damage: Expected counter-sanctions
+
+**Example Calculation**:
+US sanctions on Chinese electronics:
+- US exports to China in sector: $50B annually
+- Deadweight loss: $7.5B (15% of $50B)
+- Alternative suppliers cost premium: 25% = $12.5B
+- Chinese retaliation (agriculture): $30B
+- **Total Cost to US: $100B annually**
+
+But if successful (30% chance):
+- Chinese tech development slowed: $200B value
+- Strategic advantage maintained: $150B value
+- **Expected Benefit: $105B** (30% × $350B)
+
+**Net Expected Value: +$5B** (marginal positive, high uncertainty)
+
+### Alliance Economics
+
+Joining alliances provides economic benefits but also imposes costs:
+
+**Benefits of Membership**:
+- Reduced tariffs within bloc: +2-5% trade volume
+- Shared security reduces risk premiums: +1-2% GDP
+- Technology and knowledge transfer: +0.5% productivity
+- Collective bargaining power: Better terms with third parties
+
+**Costs of Membership**:
+- Trade diversion from efficient non-members: -1-3% welfare
+- Burden sharing obligations: 0.5-2% GDP for collective actions
+- Policy autonomy loss: Must coordinate with allies
+- Potential retaliation from excluded countries
+
+### Market Disruption Mechanics
+
+Geopolitical actions create supply shocks that ripple through the economy:
+
+**Immediate Effects**:
+1. Sanctioned goods become unavailable from target
+2. Prices spike based on elasticity of substitution
+3. Countries scramble for alternative suppliers
+4. Transport costs increase as trade routes adjust
+
+**Secondary Effects**:
+- Input shortages cascade through supply chains
+- Inflation from supply constraints
+- Investment uncertainty reduces growth
+- Currency movements from trade balance shifts
+
+**Example Cascade**:
+Russia oil embargo → European energy prices +40% → Industrial costs +15% → Consumer prices +8% → Wage demands +5% → Competitiveness loss -3% → GDP impact -2%
+
+## Strategic Considerations for Players
+
+### When to Sanction
+
+**Favorable Conditions**:
+- You have economic leverage (larger economy, critical supplier)
+- Target has limited alternatives
+- Strong coalition support available
+- Clear, achievable political objectives
+- Domestic support for economic costs
+
+**Avoid Sanctions When**:
+- Target can easily substitute suppliers
+- You're highly dependent on target's exports
+- No coalition support (unilateral sanctions rarely work)
+- Objectives are vague or maximalist
+- Your reputation is already damaged
+
+### Coalition Building Strategy
+
+**Building Effective Coalitions**:
+
+1. **Start with Natural Allies**: Countries with aligned interests and values
+2. **Offer Side Payments**: Compensate members who bear higher costs
+3. **Create Momentum**: Early joiners pressure fence-sitters
+4. **Set Clear Objectives**: Vague goals lead to fragmentation
+5. **Plan Exit Strategy**: How will sanctions end successfully?
+
+**Managing Free-Riders**:
+- Monitor member compliance continuously
+- Create verification mechanisms
+- Impose costs on defectors (reduce alliance benefits)
+- Reward burden-sharers with influence
+
+### Escalation Management
+
+**Controlling Escalation**:
+1. **Signal Intentions Clearly**: Ambiguity increases miscalculation risk
+2. **Leave Room to Escalate**: Don't start at maximum pressure
+3. **Provide Face-Saving Exits**: Allow adversaries to de-escalate with dignity
+4. **Build in Pauses**: Time for negotiation between escalation steps
+5. **Know Your Red Lines**: What triggers automatic responses?
+
+**De-escalation Tactics**:
+- Gradual, reciprocal reduction in sanctions
+- Third-party mediation
+- Package deals linking multiple issues
+- Temporary ceasefires for negotiation
+- Face-saving "victories" for both sides
+
+### Long-term Reputation Management
+
+**Building Credibility**:
+- **Consistency**: Follow through on threats and promises
+- **Proportionality**: Responses match provocations
+- **Transparency**: Clear communication of intentions
+- **Reliability**: Honor agreements even when costly
+- **Restraint**: Don't abuse dominant positions
+
+**Recovering from Reputation Damage**:
+- Time heals: 5% recovery per peaceful turn
+- Consistent compliance: Multiple small positive actions
+- Major gestures: Costly signals of change
+- New leadership: Regime change can reset reputation partially
+- Coalition participation: Contributing to collective goods
+
+## Module Integration & Data Flow
+
+### Information Inputs
+
+The module receives critical data from across the simulation:
+
+**From Trade Flow Module**:
+- Current bilateral trade volumes and dependencies
+- Available alternative suppliers and routes
+- Trade elasticities and substitution possibilities
+
+**From Country Agents**:
+- National objectives and strategic priorities
+- Risk tolerance and time preferences
+- Domestic political constraints
+
+**From Pricing & Equilibrium Module**:
+- Economic impacts of trade disruptions
+- Market share shifts from sanctions
+- Price effects of supply constraints
+
+**From Energy & Logistics Module**:
+- Critical infrastructure vulnerabilities
+- Energy supply dependencies
+- Transportation chokepoint control
+
+**From Compliance Module**:
+- Detected sanctions violations
+- Circumvention evidence and patterns
+- Enforcement effectiveness metrics
+
+### Decision Outputs
+
+The module generates policy decisions that affect the entire game:
+
+**To Trade Flow Module**:
+- Prohibited trade flows (what's sanctioned)
+- Tariff schedules by country-product pairs
+- Quota restrictions and licensing requirements
+
+**To Country Agents**:
+- Available strategic actions this turn
+- Current reputation and credibility scores
+- Alliance obligations and benefits
+
+**To Pricing & Equilibrium Module**:
+- Supply shocks from trade restrictions
+- Political risk premiums for instability
+- Uncertainty effects on investment
+
+**To Compliance & Detection Module**:
+- Active sanctions requiring monitoring
+- Coalition enforcement priorities
+- Legitimacy scores affecting enforcement
+
+## Calibration & Realism
+
+### Real-World Data Sources
+
+The module is calibrated using extensive empirical data:
+
+**Diplomatic Relations**:
+- UN voting similarity indices for alignment
+- Alliance membership databases (NATO, CSTO, SCO)
+- Bilateral trade agreement networks
+- Historical conflict data (GDELT, ICEWS event data)
+
+**Sanctions Effectiveness**:
+- Global Sanctions Database (GSDB) for success rates
+- US Treasury OFAC sanctions lists
+- EU consolidated sanctions regimes
+- UN Security Council sanctions history
+
+**Economic Interdependence**:
+- UN Comtrade bilateral trade data
+- UNCTAD foreign direct investment stocks
+- OECD technology trade statistics
+- Supply chain vulnerability assessments
+
+**Strategic Resources**:
+- Critical minerals assessments (USGS, EU Critical Raw Materials)
+- International Energy Agency trade data
+- FAO food security statistics
+- Defense industrial base reports
+
+### Key Calibrated Parameters
+
+The game uses empirically-grounded parameters:
+
+**Sanction Success Rates** (from historical data):
+- Comprehensive embargo: 35%
+- Sectoral sanctions: 30%
+- Smart sanctions: 25%
+- Symbolic sanctions: 10%
+
+**Coalition Dynamics**:
+- Coalition effectiveness bonus: 50%
+- Free-riding rate: 30% typical
+- Coalition fragmentation risk: 20% per period
+- Burden sharing inequality: Power factor of 1.5
+
+**Retaliation Parameters**:
+- Base retaliation probability: 70%
+- Escalation ladder: 5 steps to conflict
+- De-escalation probability: 30% per step
+- Tit-for-tat forgiveness: 10% noise factor
+
+**Reputation Dynamics**:
+- Memory decay: 5% per turn
+- Credibility half-life: 10 periods
+- Violation penalty: -30% reputation
+- Compliance bonus: +10% reputation
+
+**Economic Costs**:
+- Sanctions deadweight loss: 15%
+- Trade diversion premium: 25%
+- Reputation GDP impact: ±5%
+- Political risk premium: 2-10% added costs
+
+## Strategic Tips for Players
+
+### Power Projection Strategies
+
+**Economic Hegemon**: Use your market size to force choices—"trade with us or them"
+**Resource Controller**: Weaponize critical supplies during crises
+**Coalition Builder**: Multiply limited power through collective action
+**Reputation Warrior**: Build unmatched credibility for long-term influence
+**Chaos Agent**: Destabilize regions for relative advantage
+
+### Common Pitfalls to Avoid
+
+1. **Sanctioning Without Coalition**: Unilateral sanctions rarely succeed
+2. **Escalating Without Exit**: Getting trapped in spiraling retaliation
+3. **Ignoring Reputation Costs**: Short-term gains, long-term isolation
+4. **Overestimating Leverage**: Misjudging your economic importance
+5. **Free-Riding Too Often**: Eventually coalitions exclude you
+
+### Advanced Tactics
+
+**The Empty Threat**: Build reputation for toughness without always following through
+**The Reverse Sanction**: Restrict your own exports to create leverage
+**Coalition Hijacking**: Join coalitions to weaken them from within
+**Reputation Arbitrage**: Use high reputation to broker deals between adversaries
+**Strategic Ambiguity**: Keep adversaries guessing about your red lines
+
+## Victory Through Geopolitics
+
+While economic dominance is one path to victory, mastering geopolitics offers alternative routes:
+
+**Containment Victory**: Successfully isolate and economically strangle rivals
+**Alliance Victory**: Build and maintain dominant coalition controlling majority of global trade
+**Reputation Victory**: Become indispensable mediator and trusted partner
+**Deterrence Victory**: Credible threats prevent others from challenging you
+**Chaos Victory**: Profit from instability you create and control
+
+The Sanctions & Geopolitics Module ensures that economic competition in the UTA simulation includes the full spectrum of strategic statecraft—from peaceful cooperation to economic warfare, always one miscalculation away from catastrophic escalation.

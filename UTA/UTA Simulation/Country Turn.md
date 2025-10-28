@@ -1,4 +1,4 @@
-# Player (Country) Move - Complete Action Set
+# Player (Country) Turn 
 
 ## Current Actions
 - **Tariff schedule** (by partner and sector)
