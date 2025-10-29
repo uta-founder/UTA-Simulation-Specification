@@ -98,6 +98,6 @@
 ### **Overall Design Philosophy**
 
 - **Not a game UI.** A *geo-economic simulation dashboard.*
-- Modeled visually after trading terminals, IMF dashboards, and strategic command centers.
+- Style visually after trading terminals, IMF dashboards, and strategic command centers.
 - Must feel *serious, data-rich, high-stakes* — like running a national economic war room.
 

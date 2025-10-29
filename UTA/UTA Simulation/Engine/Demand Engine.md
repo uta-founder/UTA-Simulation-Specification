@@ -1,8 +1,8 @@
-# Demand Module
+# Demand Engine
 
 ## Purpose & Scope
 
-The Demand Module formalizes how countries and consumers demand goods and services, both domestically produced and imported. It models substitution between domestic and foreign varieties (Armington assumption), price and income elasticities, and compositional demand across sectors. This module is foundational to the CGE system: without properly specified demand, equilibrium prices cannot be determined and trade flows cannot be computed.
+The Demand Engine formalizes how countries and consumers demand goods and services, both domestically produced and imported. It models substitution between domestic and foreign varieties (Armington assumption), price and income elasticities, and compositional demand across sectors. This Engine is foundational to the CGE system: without properly specified demand, equilibrium prices cannot be determined and trade flows cannot be computed.
 
 Demand in the UTA simulation operates at two levels:
 1. **Final Demand:** Households, government, and investment demand for finished goods
@@ -128,7 +128,7 @@ class DemandInputs:
     population: dict[country] -> float  # Population size
     per_capita_income: dict[country] -> float  # GDP / Population
 
-    # Prices (from Pricing Module)
+    # Prices (from Pricing Engine)
     composite_prices: dict[country][product] -> float  # P[j,p]
     bilateral_prices: dict[origin][dest][product] -> float  # P[i,j,p] (CIF + tariff)
 
@@ -138,7 +138,7 @@ class DemandInputs:
     armington_shares: dict[origin][dest][product] -> float  # α[i,j,p]
     substitution_elasticities: dict[product] -> float  # σ[p]
 
-    # Policy Shocks (from Policy Modules)
+    # Policy Shocks (from Policy Engines)
     demand_shocks: dict[country][product] -> float  # Exogenous demand changes
 ```
 
@@ -170,7 +170,7 @@ class DemandOutputs:
     total_quantity_demanded: dict[country][product] -> float  # Q[j,p]
     excess_demand: dict[country][product] -> float  # Q[j,p] - Supply[j,p]
 
-    # For Trade Flow Module
+    # For Trade Flow Engine
     import_demand_by_source: dict[dest][product][origin] -> float  # q[i,j,p]
     import_value_by_source: dict[dest][product][origin] -> float  # P[i,j,p] * q[i,j,p]
 
@@ -179,7 +179,7 @@ class DemandOutputs:
     expenditure_by_product: dict[country][product] -> float
     import_penetration_rate: dict[country][product] -> float  # Import / Total Demand
 
-    # For Pricing Module
+    # For Pricing Engine
     marginal_willingness_to_pay: dict[country][product] -> float
     demand_sensitivity: dict[country][product] -> float  # ∂Q/∂P
 ```
@@ -393,9 +393,9 @@ def decompose_to_bilateral_demand(total_demand, bilateral_prices, armington_pric
 
 ## Integration Points
 
-### Inputs From Other Modules
+### Inputs From Other Engines
 
-1. **From Pricing & Market Equilibrium Module:**
+1. **From Pricing & Market Equilibrium Engine:**
    - Composite good prices P[j,p] (Armington price indices)
    - Bilateral delivered prices P[i,j,p] (CIF + tariff)
    - Price update signals
@@ -405,22 +405,22 @@ def decompose_to_bilateral_demand(total_demand, bilateral_prices, armington_pric
    - Population N[j]
    - Policy-induced demand shocks (e.g., government procurement)
 
-3. **From Trade Flow Module:**
+3. **From Trade Flow Engine:**
    - Delivered prices including transport costs and tariffs
    - Route availability (affects which origins are accessible)
 
-4. **From Sanctions & Geopolitics Module:**
+4. **From Sanctions & Geopolitics Engine:**
    - Trade bans (set bilateral demand to zero for sanctioned flows)
    - Preferential access (modify armington shares for allies)
 
-### Outputs To Other Modules
+### Outputs To Other Engines
 
-1. **To Pricing & Market Equilibrium Module:**
+1. **To Pricing & Market Equilibrium Engine:**
    - Total quantity demanded Q[j,p] for market clearing
    - Excess demand signals (Q[j,p] - S[j,p])
    - Demand elasticities for price adjustment algorithms
 
-2. **To Trade Flow Module:**
+2. **To Trade Flow Engine:**
    - Import demand by source q[i,j,p]
    - Import value by source P[i,j,p] * q[i,j,p]
    - Source substitution patterns (which origins are preferred)
@@ -430,7 +430,7 @@ def decompose_to_bilateral_demand(total_demand, bilateral_prices, armington_pric
    - Import penetration rates (domestic vs foreign consumption)
    - Expenditure breakdown
 
-4. **To Subsidy & Industrial Policy Module:**
+4. **To Subsidy & Industrial Policy Engine:**
    - Demand sensitivity to price changes (informs subsidy effectiveness)
    - Import competition metrics
 
@@ -776,4 +776,4 @@ Q[C,lux]_new = (0.2 * 1,100,000) / 200 = 1,100 units (+10%)
 
 ---
 
-**End of Demand Module Specification**
+**End of Demand Engine Specification**

@@ -1,10 +1,10 @@
-# Pricing & Market Equilibrium Module
+# Pricing & Market Equilibrium Engine
 
 ## Purpose & Scope
 
-The Pricing & Market Equilibrium Module is the computational core of the UTA simulation's economic engine. It determines market-clearing prices across all products and countries, ensuring that supply equals demand in every market while respecting budget constraints, zero-profit conditions, and macroeconomic accounting identities. This module transforms the UTA simulation from a partial equilibrium trade model into a fully-fledged Computable General Equilibrium (CGE) system.
+The Pricing & Market Equilibrium Engine is the computational core of the UTA simulation's economic engine. It determines market-clearing prices across all products and countries, ensuring that supply equals demand in every market while respecting budget constraints, zero-profit conditions, and macroeconomic accounting identities. This Engine transforms the UTA simulation from a partial equilibrium trade model into a fully-fledged Computable General Equilibrium (CGE) system.
 
-**Core Responsibility:** Given production capacities, consumption needs, trade policies, and behavioral rules from all other modules, this module computes the price vector that clears all markets simultaneously.
+**Core Responsibility:** Given production capacities, consumption needs, trade policies, and behavioral rules from all other Engines, this Engine computes the price vector that clears all markets simultaneously.
 
 **Key Outputs:**
 - Equilibrium prices for all products in all locations
@@ -64,7 +64,7 @@ Where:
 
 ### 4. Armington Price Linkage
 
-The composite price index (from Demand Module) links bilateral prices:
+The composite price index (from Demand Engine) links bilateral prices:
 
 ```
 P[j,p] = (Σ[i] α[i,j,p] * P[i,j,p]^(1-σ[p]))^(1/(1-σ[p]))
@@ -125,7 +125,7 @@ Global Consistency: Σ[j] Trade Balance[j] = 0 (world trade balances)
 
 ```python
 class PricingEquilibriumInputs:
-    # From Demand Module
+    # From Demand Engine
     demand_functions: dict[country][product] -> callable  # Q[j,p](P[j,p], Y[j])
     substitution_elasticities: dict[product] -> float  # σ[p]
     armington_shares: dict[origin][dest][product] -> float  # α[i,j,p]
@@ -135,12 +135,12 @@ class PricingEquilibriumInputs:
     marginal_costs: dict[country][product] -> float  # MC[j,p]
     input_output_coefficients: dict[country][product][input] -> float  # a[i,j,p]
 
-    # From Trade Flow Module
+    # From Trade Flow Engine
     transport_costs: dict[origin][dest][product] -> float  # t[i,j,p]
     tariff_rates: dict[importer][exporter][product] -> float  # τ[i,j,p]
     trade_bans: set[(importer, exporter, product)]  # Prohibited flows
 
-    # From Policy Modules
+    # From Policy Engines
     subsidies: dict[country][product] -> float  # s[j,p] (per-unit subsidy)
     production_quotas: dict[country][product] -> float  # Max production constraints
 
@@ -191,7 +191,7 @@ class PricingEquilibriumState:
 
 ```python
 class PricingEquilibriumOutputs:
-    # Equilibrium Prices (to all modules)
+    # Equilibrium Prices (to all Engines)
     equilibrium_prices: dict[country][product] -> float
     equilibrium_composite_prices: dict[country][product] -> float
     equilibrium_bilateral_prices: dict[origin][dest][product] -> float
@@ -322,13 +322,13 @@ def solve_equilibrium(world_state, max_iterations=1000, tolerance=1e-6):
             world_state.labor_supply, world_state.capital_stock
         )
 
-        # Step 5: Calculate demands (from Demand Module)
+        # Step 5: Calculate demands (from Demand Engine)
         total_income = calculate_income(wage, rent, world_state.endowments)
         quantities_demanded = calculate_demand(
             composite_prices, total_income, world_state.demand_params
         )
 
-        # Step 6: Calculate supplies (from Production Module)
+        # Step 6: Calculate supplies (from Production Engine)
         quantities_supplied = calculate_supply(
             prices, wage, rent, world_state.production_capacities,
             world_state.io_coefficients, world_state.subsidies
@@ -542,22 +542,22 @@ def check_convergence(excess_demands, quantities_demanded, tolerance=1e-6):
 
 ## Integration Points
 
-### Inputs From Other Modules
+### Inputs From Other Engines
 
-1. **From Demand Module:**
+1. **From Demand Engine:**
    - Demand functions Q[j,p](P[j,p], Y[j])
    - Armington parameters (α, σ)
    - Expenditure shares (β)
 
-2. **From Trade Flow Module:**
+2. **From Trade Flow Engine:**
    - Transport costs t[i,j,p]
    - Bilateral accessibility (which routes are viable)
 
-3. **From Sanctions & Geopolitics Module:**
+3. **From Sanctions & Geopolitics Engine:**
    - Tariff rates τ[i,j,p]
    - Trade bans (set bilateral flows to zero)
 
-4. **From Subsidy & Industrial Policy Module:**
+4. **From Subsidy & Industrial Policy Engine:**
    - Production subsidies s[j,p]
    - Cost adjustments from industrial policy
 
@@ -565,13 +565,13 @@ def check_convergence(excess_demands, quantities_demanded, tolerance=1e-6):
    - Production capacities
    - Factor endowments
 
-### Outputs To Other Modules
+### Outputs To Other Engines
 
-1. **To Demand Module:**
+1. **To Demand Engine:**
    - Equilibrium prices (for demand calculation next period)
    - Consumer prices (composite Armington prices)
 
-2. **To Trade Flow Module:**
+2. **To Trade Flow Engine:**
    - Bilateral prices P[i,j,p]
    - Realized trade flows
 
@@ -580,7 +580,7 @@ def check_convergence(excess_demands, quantities_demanded, tolerance=1e-6):
    - Factor income (wages, capital returns)
    - Trade balance position
 
-4. **To All Modules:**
+4. **To All Engines:**
    - Market-clearing prices (foundation for all decisions)
 
 ---
@@ -904,4 +904,4 @@ P_new = 105 / (1.30)^0.5 = 92.15
 
 ---
 
-**End of Pricing & Market Equilibrium Module Specification**
+**End of Pricing & Market Equilibrium Engine Specification**
